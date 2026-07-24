@@ -5,15 +5,23 @@ Stdlib only, by design: a benchmark a reader cannot run is not a benchmark.
 The house rules this module enforces mechanically, so no chapter can quietly
 break them:
 
-1.  Every run reports **median, min, and relative standard deviation** over
+1.  Every run reports **min, median, and relative standard deviation** over
     `repeat` independent batches. A single number is not a measurement.
+    `min` is the headline statistic and the basis for every ratio; see
+    `measure()` for why. Median and RSD are machine-quietness diagnostics.
 2.  Every run emits its **provenance header**: interpreter version, build
     flags that actually move interpreter dispatch (`OPT`, computed gotos,
     PGO/LTO, free-threading), CPU, and core count.
-3.  Results whose RSD exceeds `RSD_WARN` are flagged in the output. A noisy
-    result is reported as noisy, not rounded into confidence.
-4.  `compare()` refuses to rank rows measured on different interpreters. See
-    the note on cross-build comparison below.
+3.  Results whose RSD exceeds `RSD_WARN` are marked `(machine busy)`. That is
+    a caveat on the median, not a rejection of the min.
+4.  Ratios are computed **within a single interpreter only**. See the note on
+    cross-build comparison below, and `_harness/interpreters.py` for the
+    diagnostic that reports whether two builds are comparable at all.
+
+**Precision discipline.** Repeated runs of the same benchmark on an ordinary
+developer machine reproduce a ratio to roughly one decimal place, not two. Cite
+"about 2.7x", never "2.70x". Where a chapter needs a tighter figure than the
+harness can defend, the chapter is wrong, not the harness.
 
 **Cross-build comparison is invalid and this harness will not do it.**
 Two CPython builds of different versions typically differ in optimisation
@@ -90,6 +98,20 @@ def measure(label: str, stmt: str, setup: str = "pass", *,
 
     Uses `time.perf_counter` explicitly rather than timeit's platform default
     so the timer source is the same on every machine that runs this book.
+
+    **Why `min` is the headline statistic, not the mean or median.** For a
+    CPU-bound microbenchmark, measurement noise is *one-sided*: a scheduler
+    preemption, an interrupt, or a competing process can only ever make a batch
+    slower, never faster. The fastest observed batch is therefore the closest
+    estimate of the work's true cost, and the mean is an estimate of the work
+    plus whatever else the machine was doing. This is the reasoning the
+    `timeit` documentation gives for the same choice.
+
+    The median and RSD are still computed and reported, but as *diagnostics*:
+    they describe how quiet the machine was, not how fast the code is. A high
+    RSD alongside a stable min means the measurement is fine and the machine is
+    busy. A high RSD with a drifting min means the benchmark itself is unstable
+    and should not be cited at all.
     """
     timer = timeit.Timer(stmt, setup, timer=time.perf_counter)
     timer.timeit(number=max(number // 10, 1))  # warm-up: let the specializer settle
@@ -101,19 +123,19 @@ def measure(label: str, stmt: str, setup: str = "pass", *,
 
 
 def table(results: list[Result], *, baseline: str | None = None) -> str:
-    """Render results with an optional within-interpreter ratio column."""
+    """Render results. Ratios are computed from `min`, the robust statistic."""
     base = next((r for r in results if r.label == baseline), None) if baseline else None
     width = max(len(r.label) for r in results)
-    head = f"{'case'.ljust(width)}   median_ns      min_ns   RSD%"
+    head = f"{'case'.ljust(width)}      min_ns   median_ns   RSD%"
     if base:
-        head += f"   vs {base.label.strip()}"
+        head += "   ratio"
     rows = [head, "-" * len(head)]
     for r in results:
-        row = f"{r.label.ljust(width)} {r.median_ns:11.1f} {r.min_ns:11.1f} {r.rsd_pct:6.2f}"
+        row = f"{r.label.ljust(width)} {r.min_ns:11.1f} {r.median_ns:11.1f} {r.rsd_pct:6.1f}"
         if base:
-            row += f"   {r.median_ns / base.median_ns:6.2f}x"
+            row += f"   {r.min_ns / base.min_ns:5.2f}x"
         if r.noisy:
-            row += "  <-- NOISY, do not cite"
+            row += "   (machine busy)"
         rows.append(row)
     return "\n".join(rows)
 
@@ -124,6 +146,8 @@ def report(title: str, results: list[Result], *, baseline: str | None = None) ->
     r0 = results[0]
     print(f"method      : repeat={r0.repeat} batches x number={r0.number} ops,"
           f" warm-up {r0.number // 10} ops, perf_counter")
-    print("note        : ratios are within-interpreter only; see _harness/bench.py")
+    print("statistic   : min is the headline (noise is one-sided); median/RSD are")
+    print("              machine-quietness diagnostics, not speed. See bench.py.")
+    print("note        : ratios are within-interpreter only.")
     print()
     print(table(results, baseline=baseline))
