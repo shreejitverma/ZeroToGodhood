@@ -5,14 +5,21 @@ This appendix provides visual descriptions (ASCII-art) of the memory pools and b
 
 ### P.1 The Arena Structure
 ```text
-+-----------------------------------------------------------+
-|                          ARENA (256 KB)                   |
-+-----------+-----------+-----------+-----------+-----------+
-| POOL (4KB)| POOL (4KB)| POOL (4KB)| POOL (4KB)| POOL (4KB)|
-+-----------+-----------+-----------+-----------+-----------+
-| BLOCK(8B) | BLOCK(8B) | ...       | BLOCK(8B) | BLOCK(8B) |
-+-----------+-----------+-----------+-----------+-----------+
++------------------------------------------------------------------+
+|                           ARENA (1 MB)                           |
++------------+------------+------------+------------+--------------+
+| POOL (16KB)| POOL (16KB)| POOL (16KB)| POOL (16KB)|     ...      |
++------------+------------+------------+------------+--------------+
+| BLOCK(8B)  | BLOCK(8B)  |    ...     | BLOCK(8B)  |  BLOCK(8B)   |
++------------+------------+------------+------------+--------------+
 ```
+
+> **Version note.** Arena and pool sizes are CPython implementation details and have
+> changed across releases. The 1 MB arena and 16 KB pool above are the sizes reported by
+> `sys._debugmallocstats()` on the verification interpreters (CPython 3.13.5 and 3.14.6,
+> darwin/arm64). Earlier CPython used a 256 KB arena and a 4 KB pool. The exact release in
+> which each changed is **not yet verified against `Objects/obmalloc.c`** and must be
+> confirmed before print.
 
 ### P.2 The Small Object Allocator Workflow
 1.  **Request**: Python requests 32 bytes for a small string.

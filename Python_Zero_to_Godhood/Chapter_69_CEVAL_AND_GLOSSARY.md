@@ -41,8 +41,7 @@ The interpreter loop is not just for math; it is the system's heartbeat.
 
 This glossary provides precise definitions for the terms used by core developers and "Godhood" level practitioners.
 
-*   **Arena**: A large block of memory (typically 256KB) allocated from the OS by `PyMalloc`. Arenas are divided into **Pools**.
-*   **BATS (Basic Abstract Type System)**: The internal categorization of types in the C-API.
+*   **Arena**: A large block of memory (1 MB on CPython 3.13-3.14, measured; 256 KB in earlier releases - exact transition release unverified) allocated from the OS by `PyMalloc`. Arenas are divided into **Pools**.
 *   **Borrowed Reference**: A pointer to a `PyObject` where the caller does not own the reference. You must not call `Py_DECREF` on it unless you first call `Py_INCREF`.
 *   **Check Interval**: The frequency at which the interpreter checks for signals and thread switches.
 *   **Compact Dictionary**: A memory-optimized dict implementation (introduced in Python 3.6) that uses a dense array for values and a sparse index for keys.

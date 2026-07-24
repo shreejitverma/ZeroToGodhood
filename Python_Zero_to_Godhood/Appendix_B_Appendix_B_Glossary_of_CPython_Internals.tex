@@ -8,13 +8,9 @@ developers and ``Godhood'' level practitioners.
 \begin{itemize}
 \tightlist
 \item
-  \textbf{Arena}: A large block of memory (typically 256KB) allocated
+  \textbf{Arena}: A large block of memory (1 MB on CPython 3.13-3.14, measured; 256 KB in earlier releases - exact transition release unverified) allocated
   from the OS by \passthrough{\lstinline!PyMalloc!}. Arenas are divided
-  into \textbf{Pools}.
-\item
-  \textbf{BATS (Basic Abstract Type System)}: The internal
-  categorization of types in the C-API.
-\item
+  into \textbf{Pools}.\item
   \textbf{Borrowed Reference}: A pointer to a
   \passthrough{\lstinline!PyObject!} where the caller does not own the
   reference. You must not call \passthrough{\lstinline!Py\_DECREF!} on

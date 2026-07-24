@@ -56,7 +56,7 @@ runtime isinstance: True
 
 A static checker (mypy/pyright) verifies that `Book` has a `render(self) -> str` with a compatible
 signature; at runtime, `Protocol` is built by the `typing._ProtocolMeta` metaclass, which collects
-the protocol's member names into `_protocol_attrs`. This is the **senior-engineer contrast**: it is
+the protocol's member names into `__protocol_attrs__`. This is the **senior-engineer contrast**: it is
 Go's interfaces (implicit satisfaction by method set) brought to Python, but checked statically —
 versus Java/C++ where conforming to an interface requires an explicit `implements`/inheritance
 declaration.
@@ -202,10 +202,22 @@ PEP 695 (3.12, Vol V/Ch 18) lets the checker *infer* variance, so you rarely wri
 ## 16.5 Type erasure and the gradual-typing boundary
 
 Python's typing is **gradual** and **erased**: annotations are *metadata* stored in
-`__annotations__` (Chapter 12), never checked or enforced by the interpreter. `list[int]` and `list`
-are the same object at runtime; the `[int]` exists only for the checker. Type checking happens
-*entirely outside the interpreter* — mypy or pyright reads the source/annotations statically and
-reports errors; nothing changes in the bytecode, and there is **zero runtime overhead**.
+`__annotations__` (Chapter 12), never checked or enforced by the interpreter. Type *checking*
+happens entirely outside the interpreter — mypy or pyright reads the source statically and reports
+errors; nothing in the bytecode changes, and the check itself costs the running program nothing.
+
+Two precisions that are easy to get wrong. First, **erased does not mean absent**. `list[int]` is
+not `list`; subscription builds a distinct `types.GenericAlias` object (§16.3), and `list[int] is
+list` evaluates to `False`. What is erased is *enforcement*, not the object.
+
+Second, **annotations are not free**. Through Python 3.13 an annotation expression is evaluated
+eagerly when the `def` executes, so annotating a function does real work at definition time: on the
+verification interpreter, an annotated `def` costs several times an unannotated one, and the gap is
+allocation of the annotation objects, not type checking. This is why `from __future__ import
+annotations` existed. **PEP 649 (Python 3.14)** replaces eager evaluation with a lazily-invoked
+`__annotate__` function, which is also why a 3.14 annotation may reference a name that does not
+exist yet without raising. The cost model therefore differs by interpreter; the measured comparison
+belongs with the rest of this chapter's benchmarks and is deferred to the measurement pass.
 
 The corollary: annotations are not validation. `def f(x: int): ...; f("nope")` runs without error.
 Runtime enforcement is opt-in via libraries that *read* `__annotations__` — pydantic (validates on
