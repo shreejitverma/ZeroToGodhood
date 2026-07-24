@@ -44,9 +44,17 @@ Part_NN_<Part_Name>/
       _archive/                          provenance for merged sources
 ```
 
-Chapter numbers are **global and three-digit**, assigned once and never reused. Volume membership
-may change during editing; chapter numbers may not. This is the fix for the five-map problem: the
-number is the identity, the path is just where it currently lives.
+Two numbers, deliberately separated. This is the fix for the five-map problem, where filename
+numbers, internal `# Chapter NN` headings, and TOC positions all disagreed.
+
+- **Stable ID** — the three-digit `Ch_NNN` in the directory and filename. Assigned once when the
+  chapter is created, never reused, never renumbered. Cross-references, code paths under `code/`,
+  and `_archive` provenance all key off this. Volume membership may change; the ID may not.
+- **Display number** — the chapter number a reader sees. Derived at build time from position in
+  this file. Never written into a filename.
+
+So `Ch_017_Faster_CPython...` may render as "Chapter 41" once the earlier volumes are written, and
+nothing has to move. A chapter is renumbered by editing this file, not by touching the tree.
 
 ---
 

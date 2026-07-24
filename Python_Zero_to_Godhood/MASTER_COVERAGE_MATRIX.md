@@ -1,3 +1,22 @@
+# Master Coverage Matrix — SUPERSEDED
+
+> **This file is no longer authoritative.** The canonical structure is
+> [`CANONICAL_TOC.md`](CANONICAL_TOC.md).
+>
+> This matrix described a 16-volume plan built on a different organizing principle. The book is now
+> organized as a release timeline with interleaved topical Deep Volumes (see the two-track rule in
+> `CANONICAL_TOC.md`), split across Book II (Parts I-VII) and Book IIb (Parts VIII-X).
+>
+> **It is retained for one reason:** its per-chapter topic lists and its "Known book-level GAPS"
+> section are a checklist that the canonical TOC must be reconciled against. Do not delete it until
+> that reconciliation is recorded. Its volume numbering (Vol I-XVI) is dead; the 100 forward
+> references written against it are remapped in the Stage B response.
+>
+> Its claim that archived sources were mined into the finished chapters was **tested and upheld**
+> — see [`ARCHIVE_AUDIT.md`](ARCHIVE_AUDIT.md).
+
+---
+
 # Master Coverage Matrix — *Python Zero to Godhood*
 
 Auditable map of the whole book. Updated as each volume completes. Status legend:

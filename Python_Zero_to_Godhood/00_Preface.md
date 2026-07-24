@@ -1,3 +1,18 @@
+# Preface — TABLE OF CONTENTS SUPERSEDED
+
+> **The table of contents below is out of date and must not be used.** The canonical structure is
+> [`CANONICAL_TOC.md`](CANONICAL_TOC.md).
+>
+> This preface claims 13 volumes and 41 chapters, and coverage "from Python 1.0 to Python 3.14."
+> Neither is accurate: 17 chapters exist, and none covers 3.14. The front matter needs rewriting to
+> set honest expectations, including the verification interpreters (CPython 3.13.5 and 3.14.6), the
+> hardware, and an explicit statement that pre-2.7 transcripts are sourced from documentation rather
+> than executed, because those interpreters are not buildable on current hardware.
+>
+> The prose below is retained as drafting material for that rewrite.
+
+---
+
 # Preface
 
 # Python Zero to Godhood: Complete Evolution and Comprehensive Feature Guide
