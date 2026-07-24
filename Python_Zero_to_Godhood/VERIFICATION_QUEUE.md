@@ -13,8 +13,8 @@ how).
 |---|---|---|---|
 | 1 | PEP 779 free-threading support-status wording in 3.14 | Ch 26, Deep L | CLOSED - PEP 779 Final; Phase II "officially supported but still optional" in 3.14, GIL build remains default (peps.python.org/pep-0779, verified). Used in Ch 26. |
 | 2 | Single-threaded overhead of the free-threaded build vs default | Ch 26, Deep L | SOURCED - PEP 779 reports ~10% in 3.14 (down from ~40% in 3.13), 15% hard ceiling; ~4x multi-thread, 15-20% memory. Cited in Ch 26 and flagged as cited-not-measured pending a python3.14t build in the matrix. |
-| 3 | Whether the 3.14 JIT is a net speedup on any published suite | Deep J | OPEN |
-| 4 | Whether the 3.14 tail-call interpreter gains survived the LLVM-19 artifact correction | Deep J | OPEN |
+| 3 | Whether the 3.14 JIT is a net speedup on any published suite | Ch 27, Deep J | SOURCED - PEP 744 (primary): the JIT is currently 'about as fast as the existing specializing interpreter', roughly neutral, NOT yet a clear win; gated on a future ~5% gain to become permanent. Cited in Ch 27. Secondary 10-30% figures are workload-specific microbenchmarks, not broad-suite net speedup. |
+| 4 | Whether the 3.14 tail-call interpreter gains survived the LLVM-19 artifact correction | Deep J | OPEN - defer to Deep J; separate from the copy-and-patch JIT of Ch 27. |
 | 5 | PEP 649 interaction with dataclasses and get_type_hints | Ch 13, 16, Vol 18 | OPEN |
 | 7 | Full inventory of 3.14 opcode renames beyond LOAD_FAST_BORROW | sweep | OPEN |
 | 8 | Exact `_PyAttrCache` layout in current CPython | Ch 17 | OPEN |
