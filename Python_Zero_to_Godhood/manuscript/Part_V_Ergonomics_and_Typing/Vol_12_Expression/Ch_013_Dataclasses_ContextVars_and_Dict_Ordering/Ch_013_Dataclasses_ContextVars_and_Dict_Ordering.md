@@ -1,277 +1,334 @@
 # Chapter 13: Dataclasses, Context Variables, and Dict Ordering (Python 3.7)
 
-Python 3.7 turned the 3.6 groundwork into tools you reach for daily. **Dataclasses** (PEP 557)
-generate the `__init__`/`__repr__`/`__eq__` boilerplate from the annotations of Chapter 12.
-**Context variables** (PEP 567) fix a problem that thread-local storage cannot: per-*task* state in
-a single-threaded async runtime. And the **dict insertion-order** behavior of 3.6 became a
-**language guarantee**. We give dataclasses and contextvars the deep treatment they deserve, and
-revisit `cached_property` and `__slots__` as applications of the descriptor precedence from
-Chapter 4.
+A team migrates a request handler from threads to `asyncio` for the concurrency win of Chapter 10.
+Their structured logging attaches a request ID with `threading.local()`, which worked perfectly under
+the thread-per-request model. After the migration, the logs are corrupted: three concurrent requests
+all log the same request ID. Here is the bug, reduced to its essence and run:
 
-## Section Index
+```python
+_tl = threading.local()
+async def handler(rid):
+    _tl.value = rid
+    await asyncio.sleep(0.01)
+    return _tl.value
+# asyncio.run(gather(handler("A"), handler("B"), handler("C")))  ->  ['C', 'C', 'C']
+```
+
+Every task sees `C`, the last ID set, because `threading.local` isolates state per *thread*, and all
+three tasks share one thread. Task A sets the value, `await`s, task B runs on the same thread and
+overwrites it, and by the time A resumes its value is gone. The fix, `contextvars`, isolates state per
+*task*, and it is one of the three things Python 3.7 shipped that turned the 3.6 groundwork into tools
+you reach for daily.
+
+Those three: **dataclasses** (PEP 557) generate the `__init__`/`__repr__`/`__eq__` boilerplate from the
+annotations of Chapter 12; **context variables** (PEP 567) fix the leak above; and the dict
+insertion-order behavior of 3.6 became a **language guarantee**. Along the way we revisit
+`cached_property` and `__slots__` as applications of the descriptor precedence from Chapter 4.
+
+## Section index
+
 - **13.1** Dataclasses (PEP 557): code generation from annotations
 - **13.2** Context variables (PEP 567)
 - **13.3** The dict insertion-order guarantee
 - **13.4** `cached_property` and `__slots__` as descriptor applications
-- **13.5** Performance and anti-patterns
-- **13.6** Summary and cross-references
+- **13.5** Measurement: generated code, and the cost of recomputing
+- **13.6** Edges and failure modes
+- **13.7** Connections
+- **13.8** Exercises
+- **13.9** Summary and cross-references
+
+Listings live under `code/ch013/` and are re-executed by `make verify` on both interpreters.
 
 ---
 
 ## 13.1 Dataclasses (PEP 557): code generation from annotations
 
-**Why this exists.** A "plain data" class needs `__init__`, `__repr__`, `__eq__`, often ordering
-and hashing — dozens of lines that are pure boilerplate and easy to get subtly wrong. `@dataclass`
-reads the class's `__annotations__` (Chapter 12) and **generates** those methods.
+**Why this exists.** A "plain data" class needs `__init__`, `__repr__`, `__eq__`, often ordering and
+hashing, dozens of lines that are pure boilerplate and easy to get subtly wrong. `@dataclass` reads the
+class's `__annotations__` (Chapter 12) and *generates* those methods.
 
-**What the decorator actually does.** `@dataclass` is *not* a runtime wrapper or metaclass trick:
-at **class-definition time** it (1) reads `__annotations__` to find the fields and their order,
-(2) assembles the **source text** of each requested method, (3) `compile()`s and `exec()`s that
-source in the class namespace, and (4) attaches the resulting real function objects to the class
-`__dict__`. The generated `__init__` is ordinary bytecode — it runs at exactly the speed of a
-hand-written one, with no per-call overhead.
+**What the decorator actually does.** `@dataclass` is not a runtime wrapper or a metaclass trick: at
+class-definition time it reads `__annotations__` to find the fields and their order, assembles the
+*source text* of each requested method, `compile()`s and `exec()`s that source in the class namespace,
+and attaches the resulting real function objects to the class. The generated `__init__` is ordinary
+bytecode running at exactly the speed of a hand-written one (§13.5 measures this).
 
 ```python
-# Caption: @dataclass generates __init__/__repr__/__eq__ (and ordering); field() handles defaults.
-from dataclasses import dataclass, field, FrozenInstanceError, asdict
-
+# code/ch013/l01_dataclasses.py
 @dataclass(order=True)
 class Point:
     x: int
     y: int = 0
-    tags: list = field(default_factory=list)   # per-instance mutable default (see §13.5)
+    tags: list = field(default_factory=list)
     def __post_init__(self):
         self.dist = (self.x ** 2 + self.y ** 2) ** 0.5
-
-p = Point(3, 4)
-print("repr:", repr(p))
-print("eq:", Point(3, 4, []) == Point(3, 4, []))
-print("order:", Point(1, 0) < Point(2, 0))
-print("post_init dist:", p.dist)
-print("asdict:", asdict(Point(1, 2)))
-
-@dataclass(frozen=True)
-class Config:
-    name: str
-
-c = Config("prod")
-try:
-    c.name = "dev"
-except FrozenInstanceError as e:
-    print("frozen blocks mutation:", type(e).__name__)
 ```
 
 Verified output (CPython 3.13.5):
 
 ```text
-repr: Point(x=3, y=4, tags=[])
-eq: True
-order: True
-post_init dist: 5.0
-asdict: {'x': 1, 'y': 2, 'tags': []}
-frozen blocks mutation: FrozenInstanceError
+--- generated methods ---
+  repr        : Point(x=3, y=4, tags=[])
+  eq          : True
+  order (<)   : True
+  __post_init__: 5.0
+  asdict      : {'x': 1, 'y': 2, 'tags': []}
+--- frozen=True generates a raising __setattr__ ---
+  c.name = 'dev' -> FrozenInstanceError
 ```
 
-The pieces that matter in practice:
+The working knobs: **`field(default_factory=list)`** gives each instance a fresh `[]`, the fix for the
+mutable-default trap (a bare `tags: list = []` in a dataclass is a hard error precisely because it would
+share one list). **`frozen=True`** generates a `__setattr__` that raises `FrozenInstanceError`, making
+the instance immutable and hashable (though `object.__setattr__` can bypass it, which is how
+`__post_init__` sets a derived field on a frozen instance). **`order=True`** generates the comparison
+methods over the fields as a tuple. **`__post_init__`** runs after the generated `__init__` for
+validation or derived fields. **`asdict`/`astuple`** convert recursively. Later releases added
+**`slots=True`** and **`kw_only=True`** (3.10).
 
-- **`field(default_factory=list)`** is the *fix* for the mutable-default-argument trap: each
-  instance gets a fresh `[]`. A bare `tags: list = []` in a dataclass is an error precisely because
-  it would share one list across instances.
-- **`frozen=True`** generates `__setattr__`/`__delattr__` that raise `FrozenInstanceError`, making
-  the instance immutable (and hashable) — though `object.__setattr__` can still bypass it, which is
-  exactly how `__post_init__` sets fields on a frozen instance.
-- **`order=True`** generates `__lt__`/`__le__`/`__gt__`/`__ge__` comparing the fields as a tuple.
-- **`__post_init__`** runs after the generated `__init__` for validation or derived fields.
-- **`asdict`/`astuple`** recursively convert to plain containers.
-
-Later releases extended it: **`slots=True`** (3.10) generates a `__slots__`-based class (§13.4),
-and **`kw_only=True`** (3.10) makes fields keyword-only.
-
-**The senior-engineer contrast.** This is Python's analogue to a Java `record` or a Kotlin `data
-class` — but generated by a decorator, fully introspectable (`dataclasses.fields()`), and
-composable with the rest of the data model. Unlike a C++ aggregate, you get value equality,
-ordering, and a readable `repr` for free, and unlike `namedtuple` you get mutability (by default),
-defaults, methods, and inheritance.
+**The senior-engineer contrast.** This is Python's analogue to a Java `record` or a Kotlin `data class`,
+but generated by a decorator, fully introspectable (`dataclasses.fields()`), and composable with the
+rest of the data model. Unlike a C++ aggregate you get value equality, ordering, and a readable `repr`
+for free; unlike `namedtuple` you get mutability, defaults, methods, and inheritance.
 
 ---
 
 ## 13.2 Context variables (PEP 567)
 
-**Why this exists.** Thread-local storage (`threading.local`) isolates state per *OS thread*. That
-is exactly wrong for `asyncio`, where **many tasks share one thread**: task A sets a thread-local,
-`await`s, task B runs on the same thread and sees — or clobbers — A's value. **Context variables**
-isolate state per *logical context* (per task), surviving `await` suspensions correctly.
+**Why this exists.** The chapter opening is the why: `threading.local` isolates state per OS thread,
+which is exactly wrong for `asyncio`, where many tasks share one thread. Context variables isolate state
+per logical context (per task) and survive `await` suspensions correctly:
 
 ```python
-# Caption: each async task sees its own contextvar value, despite sharing one thread.
-import asyncio, contextvars
-
+# code/ch013/l02_contextvars.py
 request_id = contextvars.ContextVar("request_id", default="none")
-
-async def handler(rid):
+async def with_contextvar(rid):
     request_id.set(rid)
-    await asyncio.sleep(0.01)        # yield to other tasks on the same thread
-    return request_id.get()          # still this task's own value
-
-async def main():
-    return await asyncio.gather(handler("req-A"), handler("req-B"), handler("req-C"))
-
-print("per-task values:", asyncio.run(main()))
+    await asyncio.sleep(0.01)
+    return request_id.get()               # still this task's own value
 ```
 
 Verified output (CPython 3.13.5):
 
 ```text
-per-task values: ['req-A', 'req-B', 'req-C']
+--- threading.local in async: state LEAKS between tasks ---
+  three concurrent requests report: ['req-C', 'req-C', 'req-C']
+  every one sees the last id set; A and B were clobbered.
+--- contextvars: each task keeps its own value across await ---
+  three concurrent requests report: ['req-A', 'req-B', 'req-C']
 ```
 
-Each task keeps its own `request_id` across the `await` — no leakage. This is how structured
-logging correlates a request ID through an async call tree without threading it through every
-function signature.
+The two lines are the whole lesson: `threading.local` gives `['C', 'C', 'C']`, the contextvar gives
+`['A', 'B', 'C']`. Each task keeps its own `request_id` across the `await`, with no leakage.
 
-**What the interpreter actually does.** A `Context` holds variables in a C-level **Hash Array
-Mapped Trie (HAMT)** — an *immutable, persistent* map. `var.set(value)` does not mutate in place;
-it produces a new trie root that **shares all unchanged branches** with the old one (structural
-sharing), so a write allocates only the changed path (~`O(log₃₂ N) ≈ O(1)`). The crucial payoff is
-that **saving/restoring a task's entire context at an `await` is just swapping the root pointer** —
-`O(1)`. `asyncio` gives each `Task` its own `Context`; `contextvars.copy_context()` and
-`Context.run()` let you run a callable under a snapshot. The full async-state treatment is Vol IX.
+**What the interpreter actually does.** A `Context` holds its variables in a C-level **Hash Array
+Mapped Trie**, an *immutable, persistent* map. `var.set(value)` does not mutate in place; it produces a
+new trie root that *shares all unchanged branches* with the old one (structural sharing), so a write
+allocates only the changed path, about `O(log32 N)`, effectively `O(1)`. The payoff is that saving and
+restoring a task's *entire* context at an `await` is just swapping the root pointer, `O(1)`. `asyncio`
+gives each `Task` its own `Context`; `copy_context()` and `Context.run()` run a callable under a
+snapshot. This is how structured logging correlates a request ID through an async call tree without
+threading it through every signature. The full async-state treatment is **Deep H**.
 
 ---
 
 ## 13.3 The dict insertion-order guarantee
 
-The compact dict of Chapter 12 made insertion order an *implementation detail* in 3.6; **Python
-3.7 codified it as a language guarantee**. The order is now part of the spec for: iteration,
-`.keys()`/`.values()`/`.items()` views, `**kwargs` (call-site order), and class-namespace
-ordering (`__dict__`, `__annotations__`).
+The compact dict of Chapter 12 made insertion order an *implementation detail* in 3.6; **Python 3.7
+codified it as a language guarantee**. The order is now part of the spec for iteration, the
+`keys`/`values`/`items` views, `**kwargs` (call-site order), and class-namespace ordering (`__dict__`,
+`__annotations__`).
 
 ```python
-# Caption: **kwargs preserves call-site order — guaranteed since 3.7.
+# code/ch013/l03_dict_order.py
 def show(**kwargs):
     return list(kwargs)
-print("kwargs order:", show(z=1, a=2, m=3))
 ```
 
 Verified output (CPython 3.13.5):
 
 ```text
-kwargs order: ['z', 'a', 'm']
+--- **kwargs preserves call-site order (guaranteed since 3.7) ---
+  show(z=1, a=2, m=3): ['z', 'a', 'm']
+--- iteration, views, and class __dict__ all follow insertion order ---
+  dict iteration : ['gamma', 'alpha', 'beta']
+  .items() view  : ['gamma', 'alpha', 'beta']
+  class __dict__ : ['third', 'first', 'second']
 ```
 
-Ecosystem consequence: `json.dumps` is deterministic by default, ORMs and serializers can rely on
-field order, and `collections.OrderedDict` is reserved for its order-sensitive `==` and
-`move_to_end` (Chapter 8). The model and internals are Chapter 12 / Vol XII; this section is just
-the guarantee.
+The `**kwargs` and class `__dict__` orders are call-site and declaration order respectively, both now
+guaranteed. The ecosystem consequence is large: `json.dumps` is deterministic by default, ORMs and
+serializers can rely on field order, and `collections.OrderedDict` is reserved for its order-sensitive
+`==` and `move_to_end` (Chapter 8), not for ordering itself. The model and internals are Chapter 12 and
+**Deep A**; this section is the guarantee.
 
 ---
 
 ## 13.4 `cached_property` and `__slots__` as descriptor applications
 
-Both of these are direct applications of the **descriptor precedence** established in Chapter 4 —
-worth seeing here because dataclasses pair with them.
-
-**`functools.cached_property`** (3.8) is a **non-data descriptor**: it implements only `__get__`.
-By the lookup rules of Chapter 4, an instance-dict entry *outranks* a non-data descriptor — so on
-first access it computes the value and **writes it into `instance.__dict__`** under its own name;
-every later access finds it in the instance dict and never calls `__get__` again:
+Both are direct applications of the descriptor precedence from Chapter 4: a data descriptor outranks the
+instance dict, a non-data descriptor does not.
 
 ```python
-# Caption: cached_property computes once, then is shadowed by the instance-dict value it wrote.
-from functools import cached_property
-
-calls = []
+# code/ch013/l04_cached_property_slots.py
 class Data:
     @cached_property
     def heavy(self):
         calls.append(1)
         return sum(range(1000))
-
-d = Data()
-print("first:", d.heavy, "| second:", d.heavy, "| computed times:", len(calls))
-print("cached in __dict__:", "heavy" in d.__dict__)
 ```
 
 Verified output (CPython 3.13.5):
 
 ```text
-first: 499500 | second: 499500 | computed times: 1
-cached in __dict__: True
+--- cached_property computes once, then is shadowed by its own cache ---
+  first : 499500 | second: 499500 | computed times: 1
+  'heavy' now in d.__dict__: True
+--- __slots__ removes the per-instance __dict__ ---
+  dict-based total (obj + __dict__): 344
+  slots-based                      : 48
+  ss.z = 3 (not in __slots__)      -> AttributeError
 ```
 
-This is exactly why `@property` (a *data* descriptor) is **not** cacheable this way — a data
-descriptor outranks the instance dict, so it would intercept every access regardless of what is
-stored there.
+**`functools.cached_property`** (3.8) is a *non-data* descriptor: it implements only `__get__`. By
+Chapter 4's rule, an instance-dict entry outranks a non-data descriptor, so on first access it computes
+the value and *writes it into `instance.__dict__`* under its own name (`computed times: 1` even after
+two reads, and `heavy` is now in `d.__dict__`); every later access finds it there and never calls
+`__get__` again. This is exactly why a plain `@property` (a *data* descriptor) cannot be cached this
+way: it outranks the instance dict and would intercept every access regardless of what is stored. §13.5
+measures the difference.
 
 **`__slots__`** removes the per-instance `__dict__`, storing attributes in fixed offsets reached by
-**member descriptors** (data descriptors with a hard-coded offset). The memory win is large:
-
-```python
-# Caption: __slots__ trades dynamic attributes for a large memory saving.
-import sys
-class DictClass:
-    def __init__(self): self.x = 1; self.y = 2
-class SlotsClass:
-    __slots__ = ("x", "y")
-    def __init__(self): self.x = 1; self.y = 2
-
-dd, ss = DictClass(), SlotsClass()
-print("dict-based total:", sys.getsizeof(dd) + sys.getsizeof(dd.__dict__))
-print("slots-based:", sys.getsizeof(ss))
-try:
-    ss.z = 3
-except AttributeError as e:
-    print("slots block new attr:", type(e).__name__)
-```
-
-Verified output (CPython 3.13.5):
-
-```text
-dict-based total: 344
-slots-based: 48
-slots block new attr: AttributeError
-```
-
-A ~7× reduction here (344 → 48 bytes), which compounds to gigabytes across millions of objects.
-The trade-offs (no dynamic attributes; `__weakref__` omitted unless listed; subclasses without
-their own `__slots__` reintroduce `__dict__`) and the full member-descriptor internals are Vol VIII;
-dataclasses get this for free with `@dataclass(slots=True)`.
+member descriptors (data descriptors with a hard-coded offset). Here the two-attribute instance drops
+from 344 bytes (object plus its `__dict__`) to 48, a 7x reduction that compounds to gigabytes across
+millions of objects. Chapter 4 measured the same effect for access speed (1.00x, both specialize) and
+memory; here the memory is the point, and `@dataclass(slots=True)` gives it for free. The trade-offs
+(no dynamic attributes; a subclass omitting `__slots__` reintroduces `__dict__`) are **Deep A**.
 
 ---
 
-## 13.5 Performance and anti-patterns
+## 13.5 Measurement: generated code, and the cost of recomputing
 
-- **Never use a mutable literal as a dataclass default.** `tags: list = []` is rejected; use
-  `field(default_factory=list)`. (Outside dataclasses, the same trap is the mutable
-  default-argument bug — Chapter 5.)
-- **`frozen=True` has a small write cost** (every set goes through the generated `__setattr__`) and
-  makes instances hashable; use it for value objects and dict/set keys, not for hot mutable state.
-- **`contextvars`, not `threading.local`, in async code.** Thread-locals leak across tasks on one
-  loop thread. Conversely, in purely threaded code `threading.local` is fine and lighter.
-- **Don't recompute a `cached_property` expecting it to refresh** — it caches permanently per
-  instance; `del instance.attr` clears the cache if you need recomputation. It is also **not
-  thread-safe** on first access (two threads may both compute); guard if needed.
-- **`__slots__` and inheritance:** a subclass that omits `__slots__` gets a `__dict__` back,
-  silently erasing the parent's savings. Declare `__slots__` (even empty) all the way down.
+Two claims from this chapter are testable: that a generated dataclass `__init__` has zero per-call
+overhead, and that `cached_property` is worth reaching for.
+
+**Methodology.** `code/ch013/bench_dataclass.py`, through `_harness/bench.py`. `min` over 15 batches;
+within one interpreter; CPython 3.13.5, Apple M3 Pro, macOS 27.0, arm64. Reproduced across runs.
+
+| construction | ratio |
+|---|---|
+| hand-written `__init__` | 1.00x |
+| `@dataclass` `__init__` | **1.01x** |
+
+**The generated `__init__` runs at hand-written speed**, at 1.01x, confirming §13.1's design claim.
+`@dataclass` assembles real source, compiles it, and attaches an ordinary function, so there is no
+decorator wrapper on the call path and no per-call overhead. The code generation happens once, at class
+definition; every instantiation after that is plain bytecode.
+
+| attribute access | ratio |
+|---|---|
+| `cached_property` (warm) | 1.00x |
+| `@property` (recomputes) | **462x** |
+
+**A recomputing `@property` is 462x a warm `cached_property`** for this `sum(range(1000))` getter,
+because the property runs the computation on every read while the cached property is shadowed by the
+value it wrote to the instance dict. That ratio is entirely a function of how expensive the getter is:
+for a getter that just returns a stored field, the two are equal, and `cached_property` buys nothing.
+The rule: `cached_property` for expensive, stable-per-instance values; `@property` when the value can
+change (and must be recomputed) or when the getter is cheap.
 
 ---
 
-## 13.6 Summary and cross-references
+## 13.6 Edges and failure modes
 
-- **Dataclasses** (PEP 557) generate `__init__`/`__repr__`/`__eq__`/ordering by reading
-  annotations and `exec`-ing assembled source at class-definition time — zero per-call overhead.
-  `field(default_factory=...)`, `frozen=`, `order=`, `__post_init__`, and (3.10) `slots=`/`kw_only=`
-  are the working knobs.
+**`threading.local` in async code.** §13.2. It leaks across tasks on one loop thread, corrupting
+per-request state. Use `contextvars`. (In purely threaded code, `threading.local` is fine and lighter.)
+
+**A mutable literal as a dataclass default.** §13.1. `tags: list = []` is rejected; use
+`field(default_factory=list)`. The same trap outside dataclasses is the mutable default-argument bug
+(Chapter 5).
+
+**A stale `cached_property`.** §13.4. It caches permanently per instance; if the underlying data
+changes, the cache does not. `del instance.attr` clears it. It is also not thread-safe on first access
+(two threads may both compute); guard if that matters.
+
+**`__slots__` and inheritance.** §13.4. A subclass that omits `__slots__` gets a `__dict__` back,
+silently erasing the parent's savings. Declare `__slots__` (even empty) all the way down.
+
+**`frozen=True` on hot mutable state.** Every attribute set goes through the generated `__setattr__`,
+which has a small cost. Use `frozen` for value objects and dict/set keys, not for state you mutate in a
+hot loop.
+
+**Relying on set order.** §13.3. Dict order is guaranteed since 3.7; set order is not.
+
+---
+
+## 13.7 Connections
+
+**Backward.** The annotations `@dataclass` reads are Chapter 12. The descriptor precedence behind
+`cached_property`, `@property`, and `__slots__` is Chapter 4. The mutable-default trap that
+`default_factory` fixes is Chapter 5. The compact dict whose order 3.7 guaranteed is Chapter 12, and the
+`asyncio` tasks that share a thread (making `threading.local` wrong) are Chapter 10.
+
+**Forward.** `contextvars` in the async runtime and structured concurrency are **Deep H**. Dict and
+`__slots__`/member-descriptor internals are **Deep A**. Pattern matching over dataclasses is Chapter 16.
+`@dataclass(slots=True)` and the full slots story are **Deep A**. The type system that reads dataclass
+annotations is **Deep I**.
+
+**Across books.** The dataclass is the natural record type at both seams. A retrieval pipeline in **Book
+III** models each document as a frozen, slotted dataclass, which gives it value equality for
+deduplication, a readable `repr` for debugging, and a compact footprint for holding millions in memory,
+all for free. When that record crosses into a C++ index builder (**Book I**), its guaranteed field order
+(§13.3) means it serializes positionally without a schema negotiation. `contextvars` carries the request
+correlation ID across the async boundary to both books. **Deep U** and **Deep M** own those seams.
+
+---
+
+## 13.8 Exercises
+
+**1. Reproduce the leak, then fix it.** Build the §13.2 threading.local handler, confirm it reports the
+same ID for all concurrent tasks, then convert it to a `ContextVar` and confirm each task keeps its own.
+Explain, in terms of what `await` does to the thread, why the thread-local is shared and the contextvar
+is not.
+
+**2. Prove zero overhead.** Reproduce §13.5's dataclass benchmark, then add a `__slots__` dataclass and
+a `NamedTuple` with the same fields and measure all four constructions. Rank them, and explain the
+ordering in terms of what each does at instantiation.
+
+**3. Break and clear a cache.** Write a `cached_property` over a value derived from a mutable field,
+change the field, and show the property returns the stale cached value. Then clear it with `del` and
+show it recomputes. Explain why `cached_property` cannot detect the change itself, using §13.4's
+mechanism.
+
+**4. Find the silent slots erasure.** Define a `__slots__` base class, subclass it *without*
+`__slots__`, and show with `sys.getsizeof` that the subclass instances have a `__dict__` again. Explain
+why, and give the one-line fix.
+
+**5. The design question.** `@dataclass` generates methods by assembling source and `exec`-ing it, rather
+than by writing a metaclass or a runtime `__getattr__`. Argue why the code-generation approach was
+chosen over the alternatives. Your answer must address the zero-per-call-overhead result from §13.5,
+introspectability (`dataclasses.fields()`), and what a metaclass-based implementation would have cost at
+call time.
+
+---
+
+## 13.9 Summary and cross-references
+
+- **Dataclasses** (PEP 557) generate `__init__`/`__repr__`/`__eq__`/ordering by reading annotations and
+  `exec`-ing assembled source at class-definition time. `field(default_factory=...)`, `frozen=`,
+  `order=`, `__post_init__`, and (3.10) `slots=`/`kw_only=` are the knobs.
 - **Context variables** (PEP 567) give **per-task** state via an immutable **HAMT** with structural
-  sharing, so context save/restore at `await` is `O(1)` — the async-correct replacement for
-  thread-locals.
-- **Dict insertion order** is a **language guarantee since 3.7** (iteration, views, `**kwargs`,
-  class namespaces).
-- **`cached_property`** (non-data descriptor) and **`__slots__`** (member descriptors) are
-  applications of Chapter 4's descriptor precedence; `__slots__` cut instance size ~7× here.
+  sharing, so context save/restore at `await` is `O(1)`, the async-correct replacement for
+  `threading.local`, which leaks across tasks on one thread.
+- **Dict insertion order** is a **language guarantee since 3.7** (iteration, views, `**kwargs`, class
+  namespaces).
+- **`cached_property`** (non-data descriptor) and **`__slots__`** (member descriptors) apply Chapter 4's
+  descriptor precedence.
+- **Measured:** the generated dataclass `__init__` runs at **1.01x** hand-written (zero overhead); a
+  warm `cached_property` is **462x** a recomputing `@property` for an expensive getter; `__slots__` cut
+  a two-field instance from 344 to 48 bytes (7x).
 
-**Cross-references.** Annotations the decorator reads → Chapter 12. Descriptor precedence behind
-`cached_property`/`property`/`__slots__` → Chapter 4. The mutable-default trap → Chapter 5.
-contextvars in the async runtime and structured concurrency → Vol IX. dict internals → Vol XII.
-`__slots__`/member-descriptor internals and `weakref` → Vol VIII. Pattern matching over dataclasses
-→ Chapter 15.
+**Cross-references.** Annotations → Chapter 12. Descriptor precedence → Chapter 4. The mutable-default
+trap → Chapter 5. `asyncio` tasks sharing a thread → Chapter 10. contextvars and structured concurrency
+→ Deep H. dict and `__slots__` internals → Deep A. Pattern matching over dataclasses → Chapter 16. The
+type system → Deep I. The record seams to Books I and III → Deep M and Deep U.
