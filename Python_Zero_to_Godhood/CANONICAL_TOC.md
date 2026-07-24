@@ -175,18 +175,34 @@ the interesting engineering is in how each one bought its way out.
 
 ---
 
-## Scale
+## Scale and the series split (decided)
 
-| | Count |
-|---|---|
-| Parts | 10 |
-| Timeline volumes | 19 |
-| Deep volumes | 23 |
-| **Total volumes** | **42** |
-| **Total chapters** | **~264** |
-| Estimated words | **~1.6 M** at 6,000 words/chapter |
-| Estimated printed pages | **~5,000** |
+Chapter counts summed from the volume tables above:
 
-This is larger than *The Art of Computer Programming* (4 volumes, ~3,000 pages). It is stated
-here without trimming because the brief asked for complete coverage at extreme detail and this is
-what that honestly costs. **See the Stage B response for the recommended reduction options.**
+| Part | Chapters | | Part | Chapters |
+|---|---|---|---|---|
+| I — Origins | 26 | | VI — Performance | 30 |
+| II — The 2.x Ascent | 32 | | VII — Concurrency Reckoning | 25 |
+| III — The Break | 25 | | VIII — The Boundaries | 27 |
+| IV — Iteration and Async | 36 | | IX — The Standard Library | 32 |
+| V — Ergonomics and Typing | 29 | | X — Applied Python | 33 |
+
+**The series ships as two books.**
+
+| | Parts | Volumes | Chapters | Est. words | Est. pages |
+|---|---|---|---|---|---|
+| **Book II — The Evolution** | I–VII | 30 | **203** | ~1.22 M | ~3,800 |
+| **Book IIb — The Reference** | VIII–X | 12 | **92** | ~0.55 M | ~1,700 |
+| **Total** | 10 | 42 | **295** | ~1.77 M | ~5,500 |
+
+Book II is the timeline argument and is independently publishable. Book IIb is the topical
+reference the timeline cites; it can ship second without leaving Book II incomplete, because the
+two-track rule means every Book II cross-reference names a chapter that Book IIb owns.
+
+For calibration, *The Art of Computer Programming* is roughly 3,000 pages across four volumes.
+Book II alone exceeds a single TAOCP volume. This figure is recorded without trimming because the
+brief asked for complete coverage at extreme detail, and this is what that costs.
+
+**Consequence for the writing order:** Book IIb's Deep Volumes A, B, C, and I are cited by 54 of
+the 100 dangling references inherited from the old draft and by most Book II timeline chapters.
+They are written **first**, despite shipping second.
