@@ -22,7 +22,7 @@ how).
 | 11 | What PEP 751 lockfiles standardised vs tool-specific | Deep N | OPEN |
 | 12 | `sys.monitoring` (PEP 669) as profiling substrate; what it deprecates | Deep K, Vol 16 | OPEN |
 | 13 | Provenance of arena=1MB / pool=16KB: the release each changed, in obmalloc.c | Ch 19, appendices | OPEN |
-| 14 | Python 3.15 timing and feature set relative to publication | Vol 19 | OPEN |
+| 14 | Python 3.15 timing and feature set relative to publication | Vol 19 | PARTIAL - PEP 686 (UTF-8 mode default) verified Final and scheduled for 3.15 (peps.python.org), used in Ch 7. Full 3.15 feature set still open. |
 
 ## Release-history facts (Part I, Part II) — highest fabrication risk
 
