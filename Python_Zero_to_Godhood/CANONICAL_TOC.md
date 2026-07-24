@@ -36,8 +36,8 @@ This is the escape valve that prevents the Ch 8 §8.3 / Ch 16 §16.3 failure fro
 
 ```
 Part_NN_<Part_Name>/
-  Vol_NN_<Volume_Name>/                  timeline volume
-  Deep_NN_<Topic_Name>/                  deep volume
+  Vol_NN_<Volume_Name>/                  timeline volume, numbered
+  Deep_<L>_<Topic_Name>/                 deep volume, lettered A..W
     Ch_NNN_<Chapter_Title>/
       Ch_NNN_<Chapter_Title>.md          source of truth
       Ch_NNN_<Chapter_Title>.tex         generated, never hand-edited

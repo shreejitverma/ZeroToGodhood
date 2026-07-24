@@ -39,7 +39,8 @@ BLOCK = re.compile(
     re.DOTALL,
 )
 
-SCRUB = [(re.compile(r"0x[0-9a-fA-F]{6,}"), "0xADDR"),
+# Must match verify.py exactly; see the note there on why this is address-only.
+SCRUB = [(re.compile(r"(?<=at )0x[0-9a-fA-F]{6,}"), "0xADDR"),
          (re.compile(r'(file ")[^"]*(")'), r"\1<path>\2")]
 
 

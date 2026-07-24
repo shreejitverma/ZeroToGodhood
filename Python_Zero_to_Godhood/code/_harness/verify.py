@@ -38,10 +38,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 VER = f"{sys.version_info.major}.{sys.version_info.minor}"
 
+# Only scrub hex that is genuinely a memory address. An earlier version matched
+# any long hex literal, which silently destroyed real data: the immortality
+# sentinel in ch019 (0xffffffff on 3.13, 0xc0000000 on 3.14) was rewritten to
+# 0xADDR, erasing the exact version difference the listing exists to show.
+# Addresses in CPython reprs always follow "at ".
+#
+# The {6,} bound is load-bearing for IDEMPOTENCY, not just precision. Scrubbing
+# runs on both the live output and the stored expected file, so it must be safe
+# to apply twice. With `+` instead of `{6,}` the placeholder 0xADDR re-matched
+# its own 'ADD' (all valid hex) and became 0xADDRR on the second pass, failing
+# every listing that prints a code object. 0xADDR has only 3 hex digits, so the
+# 6-digit floor makes the substitution a fixed point.
 _SCRUB = [
-    (re.compile(r"0x[0-9a-fA-F]{6,}"), "0xADDR"),
+    (re.compile(r"(?<=at )0x[0-9a-fA-F]{6,}"), "0xADDR"),
     (re.compile(r"(file \")[^\"]*(\")"), r"\1<path>\2"),
-    (re.compile(r"at 0xADDR"), "at 0xADDR"),
     (re.compile(r"\s+$", re.MULTILINE), ""),
 ]
 
