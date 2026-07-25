@@ -71,8 +71,10 @@ def chapter_dirs(only: str | None) -> list[tuple[str, Path]]:
             continue
         if only and d.name != only:
             continue
-        num = re.sub(r"\D", "", d.name)
-        hits = [p for p in BOOK.rglob(f"Ch_*{num}_*/*.md")]
+        # Chapter dirs are zero-padded Ch_NNN; pad the code number to match
+        # EXACTLY (so ch18 -> Ch_018, not the substring match Ch_118).
+        num = re.sub(r"\D", "", d.name).zfill(3)
+        hits = sorted(BOOK.rglob(f"Ch_{num}_*/*.md"))
         if hits:
             out.append((d.name, hits[0]))
     return out
