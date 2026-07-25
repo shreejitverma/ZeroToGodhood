@@ -42,6 +42,7 @@ how).
 | 21 | `tuple.__basicsize__` grew 24 -> 32 bytes: which release, and why | Ch 19 (Ch_019) | OPEN — measured on both interpreters; not traced to a commit or What's New |
 | 22 | Python 0.9.0 vs 0.9.1 as the first alt.sources posting | Ch 1 (Ch_020) | SOURCED — Guido's history blog says 0.9.0; secondary sources say 0.9.1. Book follows primary (0.9.0) and flags the conflict in §1.6. A preserved 0.9.x source tree or archived posting would close it. |
 | 23 | 0.9.0 exact feature list (as opposed to the 0.9.x line) | Ch 1 (Ch_020) | OPEN — accounts agree on classes/exceptions/modules/list/dict/str; Guido does not itemise 0.9.0 specifically. Prose claims only what the record supports. |
+| 24 | `sum()` uses Neumaier compensated summation "since 3.12" | Ch 35 (Ch_035) | CITED — measured on 3.13/3.14 (naive fold -1.0 vs sum() 0.0 vs fsum 1e-16); the "since 3.12" attribution is Python 3.12 What's New / gh-100425, not locally version-tested (no 3.11 build here). Prose attributes the version to the What's New, states the behavior as measured. |
 
 ## Primary sources used so far
 
