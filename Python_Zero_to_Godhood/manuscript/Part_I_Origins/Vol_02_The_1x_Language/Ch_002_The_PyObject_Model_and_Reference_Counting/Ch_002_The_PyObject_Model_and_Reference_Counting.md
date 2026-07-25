@@ -14,7 +14,7 @@ reference count is over four billion and never changes. Both follow directly fro
 - **2.3** Reference counting: the lifecycle, and what `Py_INCREF`/`Py_DECREF` really do
 - **2.4** Immortal objects (PEP 683) and what `getrefcount` now reports
 - **2.5** What reference counting cannot do: cycles
-- **2.6** Caching, constant deduplication, and interning — three different mechanisms
+- **2.6** Caching, constant deduplication, and interning - three different mechanisms
 - **2.7** Performance and memory: the cost of universal boxing
 - **2.8** Anti-patterns and the senior-engineer contrast
 - **2.9** Summary and cross-references
@@ -23,8 +23,8 @@ reference count is over four billion and never changes. Both follow directly fro
 
 ## 2.1 The universal object header: `PyObject` and `PyVarObject`
 
-**Why this exists.** For the interpreter to treat every value uniformly — store it in a
-list, pass it to a function, garbage-collect it, print it — every value must expose the
+**Why this exists.** For the interpreter to treat every value uniformly - store it in a
+list, pass it to a function, garbage-collect it, print it - every value must expose the
 same minimal interface. CPython achieves this by prefixing *every* object with a common
 header. That header is the contract that makes "everything is an object" mechanically true.
 
@@ -55,7 +55,7 @@ inverts this:
 | | C++ | CPython |
 |---|---|---|
 | What a value's size depends on | its static type, known at compile time | its runtime type; all *references* are one pointer wide |
-| A "variable" holds | the object (by value) or a typed pointer | a `PyObject *` — always 8 bytes on 64-bit, regardless of what it points to |
+| A "variable" holds | the object (by value) or a typed pointer | a `PyObject *` - always 8 bytes on 64-bit, regardless of what it points to |
 | Dispatch | vtable pointer per object (for virtual methods only) | `ob_type` pointer per object; *all* operations dispatch through it |
 | Identity of type | compile-time | a first-class runtime object (`type(x)` is itself a `PyObject`) |
 
@@ -70,14 +70,14 @@ name x ──▶ ┌────────────────────
 
 Because all references are pointer-width, a `list` of a million integers is a million
 pointers (8 MB) pointing at a million separate 28-byte integer objects scattered on the
-heap — not a packed array of machine words. That single fact is why `array`, `numpy`, and
-the buffer protocol (Vol IX) exist, and §2.7 quantifies the cost.
+heap - not a packed array of machine words. That single fact is why `array`, `numpy`, and
+the buffer protocol (Deep K) exist, and §2.7 quantifies the cost.
 
 ---
 
 ## 2.2 The type object and the slot system
 
-**Why this exists.** `ob_type` points to a `PyTypeObject` — itself an object — that holds
+**Why this exists.** `ob_type` points to a `PyTypeObject` - itself an object - that holds
 the function pointers ("slots") the interpreter calls to make an object *do* things. When
 you write `a + b`, the interpreter does not look for a method named `__add__` by string at
 that moment; it reads `a`'s type's `tp_as_number->nb_add` slot, a direct C function
@@ -139,7 +139,7 @@ hash matches delegate: True
 The grouping of numeric/sequence/mapping methods into sub-tables (`tp_as_number`, etc.) is
 a space optimization: a type that is not a number leaves `tp_as_number` as `NULL` rather
 than carrying dozens of unused pointers. The full slot system, the descriptor protocol, and
-how `type` itself is built are the subject of Vol VIII; here we only need that **behavior
+how `type` itself is built are the subject of Deep A; here we only need that **behavior
 lives on the type, reached through `ob_type`.**
 
 ---
@@ -158,10 +158,10 @@ NULL-safe variants `Py_XINCREF`/`Py_XDECREF` guard against null pointers. When a
 brings the count to zero, the **deallocation pipeline** runs:
 
 1. The interpreter calls `obj->ob_type->tp_dealloc(obj)`.
-2. The deallocator **decrefs every object this object referenced** — freeing a list decrefs
+2. The deallocator **decrefs every object this object referenced** - freeing a list decrefs
    each element; freeing a dict decrefs every key and value. This is a recursive,
    depth-first cascade.
-3. The raw memory is returned to the allocator (PyMalloc — Vol VIII).
+3. The raw memory is returned to the allocator (PyMalloc - Deep A).
 
 You can watch the count move from Python, with one caveat: passing the object to
 `getrefcount` itself creates one transient reference, so subtract 1.
@@ -199,10 +199,10 @@ from Chapter 1.
 
 ## 2.4 Immortal objects (PEP 683) and what `getrefcount` now reports
 
-**Why this exists.** A handful of objects — `None`, `True`, `False`, the small integers,
-the empty `str`/`tuple`, interned identifiers, type objects — are referenced from
+**Why this exists.** A handful of objects - `None`, `True`, `False`, the small integers,
+the empty `str`/`tuple`, interned identifiers, type objects - are referenced from
 everywhere and live for the entire process. Counting and uncounting their references is pure
-overhead, and in a **free-threaded** build (Vol VII) every such refcount write is a
+overhead, and in a **free-threaded** build (Deep L) every such refcount write is a
 contended atomic operation on a cache line shared by all threads. **PEP 683 (Python 3.12)**
 made these objects **immortal**: their reference count is pinned to a sentinel value and
 `Py_INCREF`/`Py_DECREF` skip them entirely.
@@ -225,7 +225,7 @@ That `0xffffffff` is the immortality sentinel on this build, not a real count. T
 upshots: never write code that branches on the *magnitude* of a refcount; the modern
 `Py_INCREF` macro is no longer a bare `ob_refcnt++` but first checks for the immortal
 sentinel; and the per-object overhead this removes is exactly what makes the free-threaded
-build's shared-object access viable (Vol VII, Ch 20).
+build's shared-object access viable (Deep L, Ch 20).
 
 ---
 
@@ -246,14 +246,14 @@ del a, b            # bindings gone, but the two dicts still reference each othe
 After `del a, b`, the two dictionaries are unreachable yet each still has refcount 1 (from
 the other). Pure reference counting would leak them forever. CPython's answer is a separate,
 optional **cyclic garbage collector** (the `gc` module) that periodically finds and
-reclaims such islands. That collector — its generations, thresholds, and the
-`tp_traverse`/`tp_clear` protocol — is the subject of Chapter 3, where it enters the story
+reclaims such islands. That collector - its generations, thresholds, and the
+`tp_traverse`/`tp_clear` protocol - is the subject of the cyclic collector (Chapter 3 in the 1.x arc; Deep home Ch 30), where it enters the story
 chronologically with Python 2.0. For now, hold the division of labor: **refcounting frees
 acyclic garbage instantly; the cyclic collector cleans up the rest.**
 
 ---
 
-## 2.6 Caching, constant deduplication, and interning — three different mechanisms
+## 2.6 Caching, constant deduplication, and interning - three different mechanisms
 
 These three are routinely conflated, and the confusion produces the single most common
 piece of Python misinformation: "`257 is 257` is `False`." On a real interpreter run as a
@@ -270,7 +270,7 @@ the same object, so identity holds even across separate code objects.
 
 When the compiler builds a code object, it stores each distinct literal once in
 `co_consts` and **deduplicates equal constants**. So two `257` literals *in the same
-compilation unit* resolve to the same constant — hence the same object — even though 257 is
+compilation unit* resolve to the same constant - hence the same object - even though 257 is
 outside the small-int cache. This is not interning; it is the compiler not storing the same
 constant twice.
 
@@ -322,7 +322,7 @@ empty tuple singleton: True
 ```
 
 The corrected mental model: `257 is 257` is `True` in a script (constant dedup) and `False`
-only when the two `257`s come from different compilation units — which is exactly what the
+only when the two `257`s come from different compilation units - which is exactly what the
 interactive REPL does, compiling each line separately. That is where the folklore comes
 from. The empty tuple and the singletons `None`/`True`/`False`/`Ellipsis`/`NotImplemented`
 are statically allocated and unique by construction.
@@ -337,7 +337,7 @@ are statically allocated and unique by construction.
 
 ## 2.7 Performance and memory: the cost of universal boxing
 
-Universal boxing — every value a separate heap object behind a pointer — is what makes the
+Universal boxing - every value a separate heap object behind a pointer - is what makes the
 data model uniform, and it is also Python's dominant performance tax. The numbers are
 concrete:
 
@@ -370,11 +370,11 @@ Read these consequences off the numbers:
   is 8 bytes. A list of a million ints is ~8 MB of pointers *plus* ~28 MB of integer
   objects, versus 8 MB for a C array. This 4–5× factor, *plus* the loss of cache locality
   from chasing scattered pointers, is the entire motivation for `array.array`, `numpy`
-  arrays, and the buffer protocol (Vol IX).
+  arrays, and the buffer protocol (Deep K).
 - **Refcount churn is real CPU cost.** Every bind, every argument pass, every list append
   touches a refcount. In the single-threaded GIL build these are plain increments; in the
-  free-threaded build they become atomics — which is why immortalization (§2.4) and biased
-  reference counting matter (Vol VII).
+  free-threaded build they become atomics - which is why immortalization (§2.4) and biased
+  reference counting matter (Deep L).
 - **Identity caching saves allocations** for the hot, tiny objects (small ints, interned
   identifiers, singletons), which is why the model is viable at all despite per-object
   overhead.
@@ -387,7 +387,7 @@ Read these consequences off the numbers:
   leaves the cached range or the REPL. Use `==`.
 - **Relying on `__del__` for cleanup**: refcount-driven finalization is a CPython detail and
   is *not* guaranteed promptly (and never runs for cycle members until the cyclic collector
-  acts). For files, sockets, locks — anything with an OS resource — use a context manager.
+  acts). For files, sockets, locks - anything with an OS resource - use a context manager.
   This is the closest Python has to C++ RAII, and Chapter 5 builds it properly.
 - **Assuming value semantics on assignment** (the C++ reflex): `b = a` aliases; it does not
   copy. Mutating through `b` is visible through `a`. Reach for `copy.copy`/`copy.deepcopy`
@@ -404,16 +404,16 @@ Read these consequences off the numbers:
 - Behavior lives on the **type object** as C function-pointer **slots**; the dunder methods
   you write fill those slots.
 - **Reference counting** frees acyclic garbage deterministically and immediately, at the
-  cost of per-operation counting and an inability to reclaim **cycles** (→ Chapter 3).
+  cost of per-operation counting and an inability to reclaim **cycles** (→ the cyclic collector (Chapter 3 in the 1.x arc; Deep home Ch 30)).
 - **PEP 683 immortal objects** (3.12+) pin the refcount of process-global objects;
   `getrefcount(None)` reports `0xffffffff`, not a real count.
-- Identity surprises come from **three separate mechanisms** — the small-int cache,
-  compile-time constant deduplication, and string interning — not one. `257 is 257` is
+- Identity surprises come from **three separate mechanisms** - the small-int cache,
+  compile-time constant deduplication, and string interning - not one. `257 is 257` is
   `True` in a script. Compare values with `==`, never `is`.
 - Universal boxing makes an `int` cost 28 bytes and destroys array locality, which is the
-  root motivation for the numeric/zero-copy machinery in Vol IX.
+  root motivation for the numeric/zero-copy machinery in Deep K.
 
-**Cross-references.** The cyclic garbage collector → Chapter 3. Context managers and
-deterministic cleanup → Chapter 5. The full type-slot and descriptor machinery → Vol VIII.
+**Cross-references.** The cyclic garbage collector → the cyclic collector (Chapter 3 in the 1.x arc; Deep home Ch 30). Context managers and
+deterministic cleanup → Chapter 5. The full type-slot and descriptor machinery → Deep A.
 The free-threaded refcounting model (biased refcounting, atomics, immortalization) →
-Vol VII, Ch 20. `array`, `memoryview`, and zero-copy numerics → Vol IX.
+Deep L, Ch 20. `array`, `memoryview`, and zero-copy numerics → Deep K.
