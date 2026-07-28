@@ -16,7 +16,7 @@ how).
 | 3 | Whether the 3.14 JIT is a net speedup on any published suite | Ch 27, Deep J | SOURCED - PEP 744 (primary): the JIT is currently 'about as fast as the existing specializing interpreter', roughly neutral, NOT yet a clear win; gated on a future ~5% gain to become permanent. Cited in Ch 27. Secondary 10-30% figures are workload-specific microbenchmarks, not broad-suite net speedup. |
 | 4 | Whether the 3.14 tail-call interpreter gains survived the LLVM-19 artifact correction | Deep J | OPEN - defer to Deep J; separate from the copy-and-patch JIT of Ch 27. |
 | 5 | PEP 649 interaction with dataclasses and get_type_hints | Ch 13, 16, Vol 18 | OPEN |
-| 7 | Full inventory of 3.14 opcode renames beyond LOAD_FAST_BORROW | sweep | OPEN |
+| 7 | Full inventory of 3.14 opcode renames beyond LOAD_FAST_BORROW | sweep | PARTIAL - measured on 3.14.6: local reads in ordinary function bodies are emitted as `LOAD_FAST_BORROW`, and the fused forms `LOAD_FAST_LOAD_FAST` / `STORE_FAST_LOAD_FAST` appear on both 3.13.5 and 3.14.6. Ch 75 (Ch_156) therefore classifies by opcode *family*, never by exact name. The full rename inventory is still open. |
 | 8 | Exact `_PyAttrCache` layout in current CPython | Ch 17 | OPEN |
 | 9 | `Py_GIL_DISABLED` C-API rules; which top extensions ship ft wheels | Deep M, L | OPEN |
 | 11 | What PEP 751 lockfiles standardised vs tool-specific | Deep N | OPEN |
