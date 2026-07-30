@@ -19,7 +19,7 @@ how).
 | 7 | Full inventory of 3.14 opcode renames beyond LOAD_FAST_BORROW | sweep | PARTIAL - measured on 3.14.6: local reads in ordinary function bodies are emitted as `LOAD_FAST_BORROW`, and the fused forms `LOAD_FAST_LOAD_FAST` / `STORE_FAST_LOAD_FAST` appear on both 3.13.5 and 3.14.6. Ch 75 (Ch_156) therefore classifies by opcode *family*, never by exact name. The full rename inventory is still open. |
 | 8 | Exact `_PyAttrCache` layout in current CPython | Ch 17 | OPEN |
 | 9 | `Py_GIL_DISABLED` C-API rules; which top extensions ship ft wheels | Deep M, L | OPEN |
-| 11 | What PEP 751 lockfiles standardised vs tool-specific | Deep N | OPEN |
+| 11 | What PEP 751 lockfiles standardised vs tool-specific | Deep N | CLOSED - PEP 751 (Final, 2025) standardises the FORMAT and install semantics of pylock.toml: lock-version, created-by, unevaluated environment markers, [[packages]] with per-artifact content hashes. Tool-specific remains: discovery/resolution strategy, universal (multi-platform) solving, and update policy. Demonstrated end-to-end (generate, verify, tamper-refuse) in Deep N Ch 114 (Ch_195), offline and deterministic. |
 | 12 | `sys.monitoring` (PEP 669) as profiling substrate; what it deprecates | Deep K, Vol 16 | OPEN |
 | 13 | Provenance of arena=1MB / pool=16KB: the release each changed, in obmalloc.c | Ch 19, appendices | OPEN |
 | 14 | Python 3.15 timing and feature set relative to publication | Vol 19 | PARTIAL - PEP 686 (UTF-8 mode default) verified Final and scheduled for 3.15 (peps.python.org), used in Ch 7. Full 3.15 feature set still open. |

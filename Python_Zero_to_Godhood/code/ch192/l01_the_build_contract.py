@@ -85,8 +85,9 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None,
     wheel_name = f"{name}-{version}-py3-none-any.whl"
     with zipfile.ZipFile(Path(wheel_directory) / wheel_name, "w") as zf:
         for archive_name, data in files.items():
-            zf.writestr(archive_name, data)
-        zf.writestr(f"{dist_info}/RECORD", record)
+            # fixed 1980 date: reproducible bytes (Chapters 109, 114)
+            zf.writestr(zipfile.ZipInfo(archive_name), data)
+        zf.writestr(zipfile.ZipInfo(f"{dist_info}/RECORD"), record)
     return wheel_name
 
 

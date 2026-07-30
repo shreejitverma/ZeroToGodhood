@@ -62,8 +62,10 @@ def build_wheel(directory: Path) -> Path:
     record += f"\n{DIST_INFO}/RECORD,,\n"
     with zipfile.ZipFile(wheel_path, "w") as zf:
         for archive_name, data in files.items():
-            zf.writestr(archive_name, data)
-        zf.writestr(f"{DIST_INFO}/RECORD", record)
+            # ZipInfo's default date is 1980-01-01: the wheel's bytes (and so
+            # its hash, Chapter 114) never depend on when it was built.
+            zf.writestr(zipfile.ZipInfo(archive_name), data)
+        zf.writestr(zipfile.ZipInfo(f"{DIST_INFO}/RECORD"), record)
     return wheel_path
 
 
