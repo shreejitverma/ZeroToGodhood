@@ -50,15 +50,20 @@ not a benchmark.
 |---|---|
 | Primary | CPython **3.13.5** (`/opt/anaconda3/bin/python3`) |
 | Secondary | CPython **3.14.6** |
+| Free-threaded | CPython **3.14.6t** (PEP 703 build, `Py_GIL_DISABLED=1`); keyed `3.14t`, checked only for chapters that record output for it |
 | Hardware | Apple M3 Pro, 12 cores, 36 GB, macOS 27.0, arm64 |
 
-Override with `make verify PY313=... PY314=...`.
+Override with `make verify PY313=... PY314=... PY314T=...`.
 
 Listings that need a newer interpreter declare it and are skipped, not failed:
 
 ```python
 # requires: 3.14+
 ```
+
+Listings that only make sense without the GIL declare `# requires: free-threaded`
+and are skipped on ordinary builds; their expected output is recorded with
+`make record-314t CH=chNNN` and lives under `expected/3.14t/`.
 
 ### Two things about the numbers in this book
 

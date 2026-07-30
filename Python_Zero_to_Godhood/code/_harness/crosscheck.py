@@ -32,9 +32,11 @@ from pathlib import Path
 CODE = Path(__file__).resolve().parent.parent
 BOOK = CODE.parent / "manuscript"
 
-# "Verified output (CPython 3.13.5):" followed by a fenced block.
+# "Verified output (CPython 3.13.5):" followed by a fenced block. The version
+# may carry a trailing `t` for the free-threaded build ("CPython 3.14t ..."),
+# which selects the expected/3.14t/ pool.
 BLOCK = re.compile(
-    r"Verified output \(CPython (?P<ver>\d+\.\d+)[^)]*\):\s*\n+```(?:text|pycon)?\n"
+    r"Verified output \(CPython (?P<ver>\d+\.\d+t?)[^)]*\):\s*\n+```(?:text|pycon)?\n"
     r"(?P<body>.*?)```",
     re.DOTALL,
 )

@@ -33,10 +33,17 @@ import difflib
 import re
 import subprocess
 import sys
+import sysconfig
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VER = f"{sys.version_info.major}.{sys.version_info.minor}"
+
+# The free-threaded build is a distinct verification target, not a duplicate of
+# the same-numbered GIL build: listings can legitimately print different facts
+# on it. Its expected output lives under `expected/<major.minor>t/`, keyed by
+# build identity (Py_GIL_DISABLED), not by the runtime -X gil state.
+_FT = "t" if sysconfig.get_config_var("Py_GIL_DISABLED") else ""
+VER = f"{sys.version_info.major}.{sys.version_info.minor}{_FT}"
 
 # Only scrub hex that is genuinely a memory address. An earlier version matched
 # any long hex literal, which silently destroyed real data: the immortality
@@ -76,6 +83,13 @@ def requirement(path: Path) -> tuple[int, int] | None:
     return None
 
 
+def requires_free_threaded(path: Path) -> bool:
+    """Parse a `# requires: free-threaded` marker from the head of a listing."""
+    with path.open(encoding="utf-8") as fh:
+        return any(re.match(r"#\s*requires:\s*free-threaded", fh.readline() or "")
+                   for _ in range(3))
+
+
 def listings(chapters: list[str]) -> list[Path]:
     found: list[Path] = []
     for ch in sorted(chapters):
@@ -95,6 +109,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("chapters", nargs="*", help="e.g. ch18; default: all")
     ap.add_argument("--record", action="store_true", help="write expected output")
+    ap.add_argument("--only-recorded", action="store_true",
+                    help="skip listings with no expected output for this build "
+                         "(used for the free-threaded leg, where only the "
+                         "chapters that target it are recorded)")
     args = ap.parse_args()
 
     chapters = args.chapters or sorted(
@@ -110,6 +128,14 @@ def main() -> int:
         req = requirement(path)
         if req and sys.version_info[:2] < req:
             print(f"SKIP  {rel}  (requires {req[0]}.{req[1]}+, running {VER})")
+            skipped += 1
+            continue
+        if requires_free_threaded(path) and not _FT:
+            print(f"SKIP  {rel}  (requires the free-threaded build, running {VER})")
+            skipped += 1
+            continue
+        if args.only_recorded and not args.record and \
+                not (path.parent / "expected" / VER / f"{path.stem}.out").exists():
             skipped += 1
             continue
 
