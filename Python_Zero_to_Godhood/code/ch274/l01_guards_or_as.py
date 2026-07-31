@@ -24,12 +24,12 @@ def main() -> None:
     print("--- a GUARD adds a condition the pattern alone cannot check ---")
     def quadrant(p):
         match p:
+            case Point(x, y) if x == y:          # relationship between bound names, checked first
+                return "on the line y = x"
             case Point(x, y) if x > 0 and y > 0:
                 return "quadrant I"
             case Point(x, y) if x < 0 and y > 0:
                 return "quadrant II"
-            case Point(x, y) if x == y:          # relationship between bound names
-                return "on the line y = x"
             case Point():
                 return "somewhere else"
     for p in [Point(1, 2), Point(-1, 3), Point(5, 5), Point(2, -1)]:
