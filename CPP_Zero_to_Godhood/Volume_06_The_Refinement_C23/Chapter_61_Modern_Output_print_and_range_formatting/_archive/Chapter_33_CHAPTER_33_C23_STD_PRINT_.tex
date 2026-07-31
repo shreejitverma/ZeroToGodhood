@@ -1,0 +1,40 @@
+\hypertarget{chapter-33-c23-std-print}{%
+\section{CHAPTER 33: C23 STD PRINT}\label{chapter-33-c23-std-print}}
+
+\hypertarget{c23-the-end-of-iostream-and-printf}{%
+\section{C++23: THE END OF IOSTREAM AND
+PRINTF}\label{c23-the-end-of-iostream-and-printf}}
+
+\hypertarget{stdprint-and-stdprintln}{%
+\subsubsection{\texorpdfstring{1. \texttt{std::print} and
+\texttt{std::println}}{1. std::print and std::println}}\label{stdprint-and-stdprintln}}
+
+C++23 finally fixes standard output. \passthrough{\lstinline!std::cout!}
+is slow and verbose, while \passthrough{\lstinline!printf!} is not
+type-safe. \passthrough{\lstinline!std::print!} bridges the gap using
+the C++20 \passthrough{\lstinline!std::format!} engine.
+
+\begin{itemize}
+\item
+  \textbf{Type-safe and Fast}: It writes directly to the underlying OS
+  file descriptor without creating an intermediate
+  \passthrough{\lstinline!std::string!} allocation.
+
+\begin{lstlisting}[language={C++}]
+#include <print>
+
+std::println("User {} has {} points.", user.name, user.score);
+std::println(stderr, "Error: connection failed");
+\end{lstlisting}
+\end{itemize}
+
+\hypertarget{formatting-ranges}{%
+\subsubsection{2. Formatting Ranges}\label{formatting-ranges}}
+
+\passthrough{\lstinline!std::print!} natively understands standard
+ranges and containers.
+
+\begin{lstlisting}[language={C++}]
+std::vector<int> v = {1, 2, 3};
+std::println("{}", v); // Output: [1, 2, 3]
+\end{lstlisting}

@@ -1,0 +1,167 @@
+\hypertarget{chapter-31-c20-standard-library-additions}{%
+\section{CHAPTER 31: C20 STANDARD LIBRARY
+ADDITIONS}\label{chapter-31-c20-standard-library-additions}}
+
+\hypertarget{c20-standard-library-expansion}{%
+\section{C++20 STANDARD LIBRARY
+EXPANSION}\label{c20-standard-library-expansion}}
+
+\hypertarget{the-powerhouses}{%
+\subsubsection{1. The Powerhouses}\label{the-powerhouses}}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{std::format}: Type-safe, compile-time-checked Python-style
+  string formatting.
+  \passthrough{\lstinline!cpp     std::string s = std::format("Hello \{\} \{\}", "C++", 20);!}
+\item
+  \textbf{std::span}: Lightweight non-owning view over contiguous memory
+  (arrays, vectors).
+  \passthrough{\lstinline!cpp     void f(std::span<int> s) \{ for(auto x : s) \{ /* ... */ \} \}!}
+\item
+  \textbf{std::jthread}: A joining thread that automatically
+  \passthrough{\lstinline!join()!}s on destruction and supports
+  cooperative cancellation.
+  \passthrough{\lstinline"cpp     std::jthread t([](std::stop\_token s)\{ while(!s.stop\_requested())\{\} \});"}
+\item
+  \textbf{std::stop\_token / stop\_source}: Mechanism for cooperative
+  thread cancellation.
+\end{itemize}
+
+\hypertarget{synchronization-primitives}{%
+\subsubsection{2. Synchronization
+Primitives}\label{synchronization-primitives}}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{std::latch}: Single-use countdown synchronization.
+\item
+  \textbf{std::barrier}: Reusable synchronization point for multiple
+  threads.
+\item
+  \textbf{std::semaphore}:
+  \passthrough{\lstinline!std::counting\_semaphore!} and
+  \passthrough{\lstinline!std::binary\_semaphore!}.
+\item
+  \textbf{std::atomic\_ref}: Temporarily apply atomic operations to
+  non-atomic objects.
+\item
+  \textbf{Atomic smart pointers}:
+  \passthrough{\lstinline!std::atomic<std::shared\_ptr<T>>!} is now
+  fully supported.
+\end{itemize}
+
+\hypertarget{modern-utilities}{%
+\subsubsection{3. Modern Utilities}\label{modern-utilities}}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{std::source\_location}: Capture call-site info (file, line,
+  function) without macros.
+\item
+  \textbf{std::bit\_cast}: Reinterpret bit representations safely (and
+  in \passthrough{\lstinline!constexpr!}).
+  \passthrough{\lstinline!cpp     float f = std::bit\_cast<float>(0x3F800000u);!}
+\item
+  \textbf{std::endian}: Compile-time byte order check.
+\item
+  \textbf{std::is\_constant\_evaluated()}: Detect if code is running at
+  compile vs run time.
+\item
+  \textbf{std::ssize}: Signed version of
+  \passthrough{\lstinline!size()!}.
+\item
+  \textbf{std::numbers}: Math constants like
+  \passthrough{\lstinline!pi!}, \passthrough{\lstinline!e!},
+  \passthrough{\lstinline!sqrt2!} in
+  \passthrough{\lstinline!<numbers>!}.
+\end{itemize}
+
+\hypertarget{container-string-upgrades}{%
+\subsubsection{4. Container \& String
+Upgrades}\label{container-string-upgrades}}
+
+\begin{itemize}
+\tightlist
+\item
+  ** associative::contains**: \passthrough{\lstinline!map!} and
+  \passthrough{\lstinline!set!} now have a
+  \passthrough{\lstinline!.contains(key)!} member.
+\item
+  \textbf{string::starts\_with / ends\_with}: For
+  \passthrough{\lstinline!std::string!} and
+  \passthrough{\lstinline!std::string\_view!}.
+\item
+  \textbf{std::erase / std::erase\_if}: Free function versions of the
+  erase-remove idiom.
+  \passthrough{\lstinline!cpp     std::erase\_if(v, [](int x)\{ return x < 0; \});!}
+\item
+  \textbf{std::midpoint / std::lerp}: Numerically correct math.
+\item
+  \textbf{std::make\_shared for arrays}:
+  \passthrough{\lstinline!auto p = std::make\_shared<int[]>(10);!}
+\end{itemize}
+
+\hypertarget{volume-05-godhood-summary}{%
+\section{VOLUME 05: GODHOOD SUMMARY}\label{volume-05-godhood-summary}}
+
+\hypertarget{c20-landmark-features-reference}{%
+\subsubsection{C++20 LANDMARK FEATURES
+REFERENCE}\label{c20-landmark-features-reference}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.25}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.25}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.25}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.25}}@{}}
+\toprule
+\# & Feature & Explanation & Code Example \\
+\midrule
+\endhead
+1 & \textbf{Concepts} & Formal constraints on template arguments with
+readable errors & \passthrough{\lstinline!template<integral T>!} \\
+2 & \textbf{Modules} & Binary semantic inclusion replacing textual
+headers & \passthrough{\lstinline!import std.core;!} \\
+3 & \textbf{Coroutines} & Stackless state machines for async programming
+& \passthrough{\lstinline!co\_await!},
+\passthrough{\lstinline!co\_yield!},
+\passthrough{\lstinline!co\_return!} \\
+4 & \textbf{Ranges} & Composable, lazy-evaluated container operations &
+\passthrough{\lstinline!v | views::filter(even) | views::transform(sq);!} \\
+5 & \textbf{Spaceship Operator} & Three-way comparison
+(\passthrough{\lstinline!<=>!}) for auto-generating operators &
+\passthrough{\lstinline!auto operator<=>(const T\&) = default;!} \\
+6 & \textbf{std::span} & Non-owning view over contiguous memory
+(array/vector) & \passthrough{\lstinline!void f(std::span<int> s);!} \\
+7 & \textbf{std::format} & Type-safe, high-performance string formatting
+& \passthrough{\lstinline'std::format("Hello \{\}!", name);'} \\
+8 & \textbf{std::jthread} & Joining thread with cooperative interruption
+&
+\passthrough{\lstinline!std::jthread t([](std::stop\_token s)\{\});!} \\
+9 & \textbf{consteval / constinit} & Immediate functions (compile-time
+only) and static init &
+\passthrough{\lstinline!consteval int sq(int n);!} \\
+10 & \textbf{Designated Init} & C-style aggregate initialization for
+readability &
+\passthrough{\lstinline!Point p = \{.x = 10, .y = 20\};!} \\
+\bottomrule
+\end{longtable}
+
+C++20 was the \textbf{Gigantic Leap}. It is as significant as C++11 was
+a decade prior, introducing four ``Great Pillars'' that redefine how we
+write C++. 1. \textbf{Concepts}: Type-safe templates with readable
+errors. 2. \textbf{Modules}: The end of the ``Header/Source'' and
+\passthrough{\lstinline!\#include!} era. 3. \textbf{Coroutines}: Native
+support for asynchronous programming and generators. 4. \textbf{Ranges}:
+Composable, functional-style container operations.
+
+\textbf{The Golden Rule of C++20}: Constraints over SFINAE, Modules over
+Headers, and Ranges over Iterators. You have leaped into a new era of
+C++ architecture.
+
+\hypertarget{volume-06-latest-evolution-c23}{%
+\section{VOLUME 06 LATEST EVOLUTION
+C23}\label{volume-06-latest-evolution-c23}}

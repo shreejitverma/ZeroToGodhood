@@ -1,0 +1,183 @@
+\hypertarget{chapter-32-c23-core-language}{%
+\section{CHAPTER 32: C23 CORE
+LANGUAGE}\label{chapter-32-c23-core-language}}
+
+\hypertarget{c23-core-language-upgrades}{%
+\section{C++23 CORE LANGUAGE
+UPGRADES}\label{c23-core-language-upgrades}}
+
+C++23 is the ``Ergonomics'' release. It polishes the massive changes
+introduced in C++20, removing boilerplate and completing the modern C++
+paradigm.
+
+\hypertarget{deducing-this-explicit-object-parameters}{%
+\subsubsection{\texorpdfstring{1. Deducing \texttt{this} (Explicit
+Object
+Parameters)}{1. Deducing this (Explicit Object Parameters)}}\label{deducing-this-explicit-object-parameters}}
+
+One of the most revolutionary changes for class design in modern C++. By
+making the implicit \passthrough{\lstinline!this!} pointer explicit as a
+named parameter, we unlock capabilities that previously required heavy
+template metaprogramming.
+
+\hypertarget{pattern-a-replacing-crtp-curiously-recurring-template-pattern}{%
+\paragraph{Pattern A: Replacing CRTP (Curiously Recurring Template
+Pattern)}\label{pattern-a-replacing-crtp-curiously-recurring-template-pattern}}
+
+Historically, to achieve static polymorphism, we had to inject the
+derived type into the base class via CRTP. With C++23, the base class
+can simply deduce the derived type via the explicit
+\passthrough{\lstinline!this!} parameter.
+
+\textbf{Before C++23 (The CRTP Way):}
+
+\begin{lstlisting}[language={C++}]
+template <typename Derived>
+struct Base {
+    void interface() {
+        // Cast 'this' to the Derived type to call its implementation
+        static_cast<Derived*>(this)->implementation();
+    }
+};
+
+struct Derived : Base<Derived> {
+    void implementation() { std::println("Derived implementation"); }
+};
+\end{lstlisting}
+
+\textbf{After C++23 (Deducing \passthrough{\lstinline!this!}):}
+
+\begin{lstlisting}[language={C++}]
+struct Base {
+    // 'Self' deduces to the exact type of the object invoking the method
+    template <typename Self>
+    void interface(this Self&& self) {
+        std::forward<Self>(self).implementation();
+    }
+};
+
+// No more angle brackets in inheritance!
+struct Derived : Base {
+    void implementation() { std::println("Derived implementation"); }
+};
+\end{lstlisting}
+
+\hypertarget{pattern-b-de-duplicating-accessors}{%
+\paragraph{Pattern B: De-duplicating
+Accessors}\label{pattern-b-de-duplicating-accessors}}
+
+Before C++23, if you had a wrapper class, you needed up to four
+overloads (\passthrough{\lstinline!\&!},
+\passthrough{\lstinline!const\&!}, \passthrough{\lstinline!\&\&!},
+\passthrough{\lstinline!const\&\&!}) to correctly forward the underlying
+data. Now, you only need one.
+
+\begin{lstlisting}[language={C++}]
+template <typename T>
+class OptionalWrapper {
+    T payload;
+public:
+    // This single function perfectly forwards payload depending on 
+    // whether the OptionalWrapper is an lvalue, rvalue, or const.
+    template <typename Self>
+    auto&& value(this Self&& self) {
+        return std::forward<Self>(self).payload;
+    }
+};
+\end{lstlisting}
+
+\hypertarget{pattern-c-recursive-lambdas}{%
+\paragraph{Pattern C: Recursive
+Lambdas}\label{pattern-c-recursive-lambdas}}
+
+Because lambdas are just unnamed structs with an
+\passthrough{\lstinline!operator()!}, they didn't have a name to call
+themselves recursively without using heavy wrappers like
+\passthrough{\lstinline!std::function!}. Now, they can pass themselves
+as an explicit parameter.
+
+\begin{lstlisting}[language={C++}]
+auto fib = [](this auto self, int n) -> int {
+    if (n <= 1) return n;
+    return self(n - 1) + self(n - 2);
+};
+std::println("Fibonacci(10) = {}", fib(10));
+\end{lstlisting}
+
+\hypertarget{syntactic-ergonomics-operations}{%
+\subsubsection{2. Syntactic Ergonomics \&
+Operations}\label{syntactic-ergonomics-operations}}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Multidimensional operator{[}{]}}: You can now pass multiple
+  arguments to \passthrough{\lstinline!operator[]!}, enabling clean
+  multi-index syntax (\passthrough{\lstinline!arr[i, j]!}).
+  \passthrough{\lstinline!cpp     struct Matrix \{         double\& operator[](size\_t r, size\_t c) \{ return data[r * cols + c]; \}     \};!}
+\item
+  \textbf{if consteval}: A cleaner language-level replacement for
+  \passthrough{\lstinline!if (std::is\_constant\_evaluated())!}. The
+  body can call \passthrough{\lstinline!consteval!} functions directly.
+  \passthrough{\lstinline!cpp     constexpr int f(int i)\{          if consteval \{ return i * 2; \}          else \{ return i; \}      \}!}
+\item
+  \textbf{auto(x) / auto\{x\} (Decay Copy)}: Creates a decay-copy of an
+  expression as a prvalue. Replaces the internal
+  \passthrough{\lstinline!decay\_copy!} workaround.
+  \passthrough{\lstinline!cpp     std::erase(v.begin(), v.end(), auto(v.front()));!}
+\item
+  \textbf{Static operator() and operator{[}{]}}: Lambdas and functors
+  without state can declare these operators
+  \passthrough{\lstinline!static!}, allowing the compiler to omit
+  passing the hidden \passthrough{\lstinline!this!} pointer.
+  \passthrough{\lstinline!cpp     auto fn = [](int x) static \{ return x * 2; \};!}
+\item
+  \textbf{uz / z literals}: New literal suffixes
+  (\passthrough{\lstinline!uz!} for \passthrough{\lstinline!size\_t!},
+  \passthrough{\lstinline!z!} for \passthrough{\lstinline!ptrdiff\_t!}),
+  eliminating signed/unsigned mismatch warnings in loop counters.
+  \passthrough{\lstinline!cpp     for (auto i = 0uz; i < v.size(); ++i)\{\}!}
+\end{itemize}
+
+\hypertarget{preprocessor-imports}{%
+\subsubsection{3. Preprocessor \& Imports}\label{preprocessor-imports}}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{import std;}: The holy grail. The entire C++ standard library
+  is importable as a single module unit, eliminating dozens of
+  \passthrough{\lstinline!\#include!} directives.
+  \passthrough{\lstinline'cpp     import std;     int main()\{ std::println("Hello C++23!"); \}'}
+\item
+  \textbf{\#elifdef / \#elifndef}: Chain preprocessor directives
+  cleanly, removing deeply nested conditionals.
+\item
+  \textbf{\#warning}: Standardizes the widely-supported
+  \passthrough{\lstinline!\#warning!} preprocessor diagnostic.
+\end{itemize}
+
+\hypertarget{safety-optimization}{%
+\subsubsection{4. Safety \& Optimization}\label{safety-optimization}}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Lifetime extension of temporaries in range-for}: Temporaries
+  created in the range-initializer now live for the full duration of the
+  loop, fixing a massive UB footgun.
+  \passthrough{\lstinline"cpp     for (auto e : getVector()[0]) \{\} // Now safe!"}
+\item
+  \textbf{{[}{[}assume(expr){]}{]} attribute}: Tells the compiler that
+  \passthrough{\lstinline!expr!} is always true. Replaces vendor
+  extensions like \passthrough{\lstinline!\_\_builtin\_assume!}.
+\item
+  \textbf{Simpler implicit move}: A move-eligible id-expression in a
+  \passthrough{\lstinline!return!} or \passthrough{\lstinline!throw!} is
+  always treated as an xvalue.
+\item
+  \textbf{constexpr relaxations}: Static
+  \passthrough{\lstinline!constexpr!} local variables and
+  \passthrough{\lstinline!std::unique\_ptr!} are now allowed in
+  \passthrough{\lstinline!constexpr!} contexts.
+\end{itemize}
