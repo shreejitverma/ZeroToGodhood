@@ -1,0 +1,36 @@
+/* Python: Zero to Godhood -- EPUB stylesheet */
+:root {
+  --ink: #16181D; --accent: #24507A; --deep: #7A3B69;
+  --muted: #6B7280; --rule: #C7CDD6; --codebg: #F6F7F9; --coderule: #D7DCE3;
+}
+body {
+  font-family: Charter, Georgia, "Times New Roman", serif;
+  color: var(--ink); line-height: 1.55; margin: 0 6%;
+  text-align: justify; hyphens: auto;
+}
+h1, h2, h3, h4 {
+  font-family: "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  line-height: 1.2; color: var(--ink); font-weight: 700;
+  text-align: left; margin-top: 1.6em;
+}
+h1 { font-size: 1.7em; border-bottom: 1.5px solid var(--ink); padding-bottom: 0.25em; }
+h2 { font-size: 1.25em; color: var(--accent); }
+h3 { font-size: 1.05em; }
+h1.part-divider { color: var(--accent); border: 0; text-align: left; }
+a { color: #1F5C8B; text-decoration: none; }
+code, pre, kbd {
+  font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.86em;
+}
+code { color: #16181D; }
+pre {
+  background: var(--codebg); border-left: 3px solid var(--accent);
+  padding: 0.7em 0.9em; overflow-x: auto; line-height: 1.4;
+  border-radius: 3px; white-space: pre-wrap; word-break: break-word;
+}
+pre.output, div.output pre { border-left-color: var(--rule); }
+blockquote { color: var(--muted); border-left: 3px solid var(--rule); margin-left: 0; padding-left: 1em; }
+table { border-collapse: collapse; margin: 1em 0; }
+th, td { border-bottom: 1px solid var(--rule); padding: 4px 10px; text-align: left; }
+th { border-bottom: 1.5px solid var(--ink); }
+hr { border: 0; border-top: 1px solid var(--rule); width: 40%; margin: 1.4em auto; }

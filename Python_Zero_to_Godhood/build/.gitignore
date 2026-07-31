@@ -1,0 +1,11 @@
+# Generated book artifacts and intermediates (regenerate with `make -f build/Makefile all`)
+*.pdf
+*.epub
+*.html
+book_body.md
+book_web.md
+sample_body.md
+cover.png
+cover_tmp*
+build_full.log
+manifest.tsv

@@ -1,0 +1,255 @@
+% ============================================================================
+%  Python: Zero to Godhood -- book design (LuaLaTeX + KOMA scrbook)
+%  Loaded via pandoc -H. Fonts, colours, code styling, part/volume/chapter
+%  design, front matter macros, running heads.
+% ============================================================================
+
+% ---- Fonts (LuaLaTeX + fontspec, with glyph fallback for CJK/emoji) --------
+\usepackage{fontspec}
+\usepackage{unicode-math}
+\directlua{
+  luaotfload.add_fallback("zghfallback", {
+    "Noto Sans CJK SC:mode=harf;",
+    "Noto Color Emoji:mode=harf;",
+    "Apple Symbols:mode=harf;",
+    "STIX Two Text:mode=harf;",
+  })
+}
+\setmainfont{Charter}[
+  Ligatures=TeX, Numbers=OldStyle,
+  RawFeature={fallback=zghfallback},
+  UprightFont={* Roman}, BoldFont={* Bold},
+  ItalicFont={* Italic}, BoldItalicFont={* Bold Italic}]
+\setsansfont{Noto Sans}[
+  Ligatures=TeX, RawFeature={fallback=zghfallback}]
+\setmonofont{JetBrainsMono Nerd Font}[
+  Scale=0.86, RawFeature={fallback=zghfallback}]
+\setmathfont{STIX Two Math}
+% Headings use the sans family; \headingfont is an alias for custom macros.
+\newcommand{\headingfont}{\sffamily}
+
+% ---- Colour palette --------------------------------------------------------
+\usepackage{xcolor}
+\definecolor{zgink}{HTML}{16181D}      % near-black body ink
+\definecolor{zgaccent}{HTML}{24507A}   % deep slate blue (timeline accent)
+\definecolor{zgdeep}{HTML}{7A3B69}     % muted plum (deep-volume accent)
+\definecolor{zgmuted}{HTML}{6B7280}    % muted grey
+\definecolor{zgrule}{HTML}{C7CDD6}     % hairline rule
+\definecolor{zgcodebg}{HTML}{F6F7F9}   % code background
+\definecolor{zgcoderule}{HTML}{D7DCE3} % code left rule
+\definecolor{zglink}{HTML}{1F5C8B}     % link ink
+\color{zgink}
+
+% ---- Page geometry ---------------------------------------------------------
+\usepackage[
+  paperwidth=7in, paperheight=9.5in,
+  inner=0.92in, outer=0.72in, top=0.85in, bottom=0.9in,
+  headsep=14pt, footskip=26pt]{geometry}
+
+% ---- Microtypography & spacing ---------------------------------------------
+\usepackage{microtype}
+\usepackage{ragged2e}
+\linespread{1.06}
+\setlength{\emergencystretch}{2em}
+\usepackage{setspace}
+\frenchspacing
+\usepackage{needspace}
+
+% ---- Code: fvextra gives line-breaking inside pandoc's Highlighting ---------
+\usepackage{fvextra}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+\fvset{
+  breaklines=true, breakanywhere=true, breaksymbolleft={},
+  fontsize=\small, commandchars=\\\{\}}
+% Wrap pandoc's Shaded (highlighted code) blocks in a soft, blue-ruled box.
+\renewenvironment{Shaded}{%
+  \begin{tcolorbox}[breakable, enhanced, sharp corners,
+    colback=zgcodebg, colframe=zgcoderule, boxrule=0.3pt,
+    borderline west={2.4pt}{0pt}{zgaccent!60},
+    left=9pt, right=7pt, top=5pt, bottom=5pt,
+    boxsep=0pt, before skip=9pt, after skip=11pt]}%
+  {\end{tcolorbox}}
+% Plain verbatim (```text output blocks): muted left rule, clearly not code.
+\DefineVerbatimEnvironment{verbatim}{Verbatim}{%
+  breaklines=true, breakanywhere=true, fontsize=\small,
+  frame=leftline, framerule=2pt, rulecolor=\color{zgrule},
+  framesep=9pt, xleftmargin=11pt}
+
+% ---- Lists, tables, rules --------------------------------------------------
+\usepackage{enumitem}
+\setlist{leftmargin=1.3em, itemsep=1pt, topsep=3pt, parsep=0pt}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{ragged2e}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+
+% ---- Sectioning: parts numbered (Roman), chapters/sections unnumbered ------
+\setcounter{secnumdepth}{-1}
+\setcounter{tocdepth}{0}   % TOC lists parts, volumes, chapters (via \addcontentsline)
+
+% ---- KOMA heading styling --------------------------------------------------
+\usepackage{scrlayer-scrpage}
+\setkomafont{chapter}{\sffamily\bfseries\LARGE\color{zgink}}
+\setkomafont{section}{\sffamily\bfseries\large\color{zgaccent}}
+\setkomafont{subsection}{\sffamily\bfseries\normalsize\color{zgink}}
+\setkomafont{subsubsection}{\sffamily\bfseries\small\color{zgmuted}}
+\renewcommand*{\chapterformat}{}
+\renewcommand*{\chapterheadstartvskip}{\vspace*{0.2\baselineskip}}
+\renewcommand*{\chapterheadendvskip}{%
+  \par\nobreak\vskip 4pt\hrule height 0.6pt\vskip 14pt}
+\RedeclareSectionCommand[beforeskip=1.3\baselineskip, afterskip=.6\baselineskip]{section}
+\RedeclareSectionCommand[beforeskip=1.0\baselineskip, afterskip=.4\baselineskip]{subsection}
+
+% ---- Running heads ---------------------------------------------------------
+\clearpairofpagestyles
+\automark[section]{chapter}
+\automark*[subsection]{}
+\renewcommand*{\chaptermarkformat}{}
+\setkomafont{pagehead}{\sffamily\footnotesize\color{zgmuted}}
+\setkomafont{pagenumber}{\sffamily\footnotesize\color{zgmuted}}
+\ihead{}\ohead{}
+\ohead[\pagemark]{\pagemark}
+\ihead[]{\leftmark}
+\lehead{\pagemark}\rohead{\rightmark}
+\lohead{}\rehead{}
+\setlength{\headheight}{28pt}
+
+% ---- Hyperlinks & metadata -------------------------------------------------
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+  colorlinks=true, linkcolor=zglink, urlcolor=zglink, citecolor=zglink,
+  bookmarksnumbered=false, bookmarksopen=true,
+  pdftitle={Python: Zero to Godhood},
+  pdfauthor={Shreejit Verma},
+  pdfsubject={The evolutionary history of Python at the level of the implementation},
+  pdfkeywords={Python, CPython, interpreter, PEP, mastery}}
+\usepackage{bookmark}
+
+% ---- Table of contents styling ---------------------------------------------
+\usepackage{tocbasic}
+\DeclareTOCStyleEntry[
+  entrynumberformat=\hphantom, dynnumwidth,
+  beforeskip=6pt plus 1pt]{tocline}{chapter}
+\setkomafont{partentry}{\sffamily\bfseries\large\color{zgaccent}}
+\setkomafont{chapterentry}{\normalfont\normalsize\color{zgink}}
+
+% ============================================================================
+%  Front-matter, part, volume, and colophon macros
+% ============================================================================
+\newcommand{\zgtitle}{Python: Zero to Godhood}
+\newcommand{\zgsubtitle}{The Evolutionary History of Python,\\ Told at the Level of the Implementation}
+
+% ---- Title page ------------------------------------------------------------
+\newcommand{\maketitlepage}{%
+  \begin{titlepage}\centering\thispagestyle{empty}
+  \headingfont
+  \vspace*{0.10\textheight}
+  {\color{zgaccent}\rule{2.6cm}{2pt}}\par
+  \vspace{1.6em}
+  {\bfseries\fontsize{40}{44}\selectfont \textcolor{zgink}{Python}}\par
+  \vspace{0.15em}
+  {\bfseries\fontsize{40}{44}\selectfont \textcolor{zgaccent}{Zero to Godhood}}\par
+  \vspace{1.4em}
+  {\large\color{zgmuted} The evolutionary history of Python,\\[2pt]
+   told at the level of the implementation.}\par
+  \vspace{2.4em}
+  {\color{zgrule}\rule{0.62\textwidth}{0.5pt}}\par
+  \vspace{1.6em}
+  {\normalsize\color{zgink}
+   From Guido van Rossum's Christmas 1989 prototype\\[2pt]
+   to the free-threaded frontier.}\par
+  \vspace{0.6em}
+  {\footnotesize\color{zgmuted} Every feature traced to the release that introduced it,\\
+   the PEP that argued for it, the problem it solved, and what it cost.}\par
+  \vfill
+  {\Large\bfseries\color{zgink} Shreejit Verma}\par
+  \vspace{0.5em}
+  {\footnotesize\color{zgmuted} Book II of the Zero to Godhood series}\par
+  \vspace{1.4em}
+  {\color{zgaccent}\rule{2.6cm}{2pt}}\par
+  \vspace*{0.06\textheight}
+  \end{titlepage}}
+
+% ---- Copyright page --------------------------------------------------------
+\newcommand{\makecopyrightpage}{%
+  \thispagestyle{empty}\null\vfill
+  {\footnotesize\color{zgmuted}\noindent
+  \textit{\zgtitle}\par\vspace{0.8em}
+  Copyright \textcopyright\ 2026 Shreejit Verma. All rights reserved.\par\vspace{0.8em}
+  This book is a mastery guide for senior engineers. It assumes fluency in at
+  least one systems language, comfort with operating-system and memory concepts,
+  and working Python.\par\vspace{0.8em}
+  Every runnable listing in this book was executed and its output recorded
+  byte-for-byte across three interpreters: CPython 3.13.5, CPython 3.14.6, and
+  the free-threaded CPython 3.14 build. Output blocks marked ``Verified output''
+  reproduce those recordings exactly.\par\vspace{0.8em}
+  Set in Charter, Noto Sans, and JetBrains Mono. Composed with LuaLaTeX and
+  pandoc.\par\vspace{0.8em}
+  Edition compiled \today.\par}
+  \vspace{2em}}
+
+% ---- Part page -------------------------------------------------------------
+\newcounter{zgpart}
+\newcommand{\bookpart}[2]{%
+  \cleardoublepage
+  \phantomsection
+  \refstepcounter{zgpart}
+  \addcontentsline{toc}{part}{Part~\Roman{zgpart}\quad #1}%
+  \thispagestyle{empty}
+  \begingroup\headingfont\raggedright
+  \null\vspace*{0.22\textheight}
+  {\color{zgaccent}\rule{3.2cm}{2.5pt}}\par
+  \vspace{1.4em}
+  {\bfseries\fontsize{15}{18}\selectfont\color{zgmuted}\MakeUppercase{Part \Roman{zgpart}}}\par
+  \vspace{0.7em}
+  {\bfseries\fontsize{34}{38}\selectfont\color{zgink} #1}\par
+  \ifx\relax#2\relax\else\vspace{0.8em}{\Large\color{zgmuted} #2}\par\fi
+  \endgroup
+  \cleardoublepage}
+
+% ---- Volume dividers (timeline = blue, deep = plum) ------------------------
+\newcommand{\zgvoldivider}[3]{% {accentcolor}{label}{title}
+  \cleardoublepage
+  \phantomsection
+  \addcontentsline{toc}{chapter}{\texorpdfstring{\textbf{#2.}~\textit{#3}}{#2. #3}}%
+  \thispagestyle{empty}
+  \begingroup\headingfont\raggedright
+  \null\vspace*{0.30\textheight}
+  {\color{#1}\rule{3.0cm}{2pt}}\par
+  \vspace{1.1em}
+  {\bfseries\fontsize{13}{16}\selectfont\color{zgmuted}\MakeUppercase{#2}}\par
+  \vspace{0.55em}
+  {\bfseries\fontsize{26}{30}\selectfont\color{zgink} #3}\par
+  \endgroup
+  \clearpage}
+\newcommand{\booktimelinevol}[2]{\zgvoldivider{zgaccent}{#1}{#2}}
+\newcommand{\bookdeepvol}[2]{\zgvoldivider{zgdeep}{#1}{#2}}
+
+% ---- Colophon --------------------------------------------------------------
+\newcommand{\makecolophon}{%
+  \cleardoublepage\thispagestyle{empty}
+  \begingroup\headingfont\centering
+  \null\vspace*{0.25\textheight}
+  {\color{zgaccent}\rule{2.2cm}{1.5pt}}\par\vspace{1.4em}
+  {\bfseries\Large\color{zgink} Colophon}\par\vspace{1em}
+  \endgroup
+  {\footnotesize\color{zgmuted}\centering
+  \textit{\zgtitle} gathers 295 chapters across ten parts, nineteen timeline
+  volumes, and twenty-three deep volumes.\par\vspace{0.6em}
+  The body is set in Charter; headings in Noto Sans; code in JetBrains Mono.\par
+  \vspace{0.6em}
+  Composed with pandoc and LuaLaTeX from Markdown sources.\par\vspace{0.6em}
+  \textit{The frontier moves; the core holds.}\par}}
+
+% ---- Small refinements -----------------------------------------------------
+\usepackage[normalem]{ulem}
+\widowpenalty=10000
+\clubpenalty=10000
+\raggedbottom
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55\baselineskip plus 2pt}
+\pagestyle{scrheadings}

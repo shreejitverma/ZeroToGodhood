@@ -1,0 +1,54 @@
+/* Python: Zero to Godhood -- HTML edition */
+:root {
+  --ink:#16181D; --accent:#24507A; --deep:#7A3B69; --muted:#6B7280;
+  --rule:#C7CDD6; --codebg:#F6F7F9; --coderule:#D7DCE3; --link:#1F5C8B;
+  --page:#FFFFFF;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: Charter, Georgia, "Times New Roman", serif;
+  color: var(--ink); background: var(--page);
+  line-height: 1.6; max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.3rem 6rem;
+  text-align: justify; hyphens: auto; font-size: 1.02rem;
+}
+h1, h2, h3, h4 {
+  font-family: "Helvetica Neue", Arial, "Noto Sans", system-ui, sans-serif;
+  color: var(--ink); font-weight: 700; line-height: 1.22;
+  text-align: left; margin: 2.2rem 0 0.8rem;
+}
+h1 { font-size: 1.85rem; padding-bottom: .3rem; border-bottom: 2px solid var(--ink); }
+h1.part, h1.volume { border: 0; color: var(--accent); margin-top: 3rem; }
+h1.volume { color: var(--deep); }
+h2 { font-size: 1.3rem; color: var(--accent); }
+h3 { font-size: 1.08rem; }
+p { margin: 0.7rem 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+strong { color: var(--ink); }
+code, kbd, samp {
+  font-family: "JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  font-size: 0.86em; background: rgba(36,80,122,0.06); padding: 0.05em 0.28em;
+  border-radius: 3px;
+}
+pre {
+  font-family: "JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  background: var(--codebg); border-left: 3px solid var(--accent);
+  padding: .85rem 1rem; overflow-x: auto; line-height: 1.45; font-size: 0.82rem;
+  border-radius: 4px; margin: 1rem 0;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+blockquote { color: var(--muted); border-left: 3px solid var(--rule); margin: 1rem 0; padding: .2rem 1rem; }
+hr { border: 0; border-top: 1px solid var(--rule); width: 38%; margin: 1.6rem auto; }
+table { border-collapse: collapse; margin: 1rem 0; font-size: 0.95rem; width: 100%; }
+th, td { border-bottom: 1px solid var(--rule); padding: .35rem .7rem; text-align: left; }
+th { border-bottom: 2px solid var(--ink); font-family: "Noto Sans", sans-serif; }
+#TOC { font-family: "Noto Sans", system-ui, sans-serif; font-size: .93rem; }
+#TOC ul { list-style: none; padding-left: 1rem; }
+#TOC > ul { padding-left: 0; }
+#TOC a { color: var(--ink); }
+#TOC li { margin: .18rem 0; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink:#E6E8EC; --page:#15171C; --codebg:#1E2128; --muted:#9AA3B2;
+          --accent:#7FA8D4; --deep:#C79BBB; --link:#8FB6DD; --rule:#333A45; }
+  code, kbd, samp { background: rgba(127,168,212,0.12); }
+}
