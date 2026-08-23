@@ -67,6 +67,41 @@ def quote_bare_dunders(heading):
                    for p in parts)
 
 
+def check_manuscript_coverage():
+    """Fail if the manuscript tree holds anything structure.py does not list.
+
+    Walks every directory under manuscript/ (skipping any _archive subtree).
+    Each directory whose name starts with Ch_ must be the chapter directory of
+    an id listed in PARTS and must sit directly under the volume directory
+    PARTS names for that id. Anything else, at any depth, aborts the build.
+    """
+    expected_dir = {}
+    for part in PARTS:
+        for _, _, _, vdir, ids in part[3]:
+            for cid in ids:
+                if cid in expected_dir:
+                    fail(f"{cid} listed more than once in structure.py")
+                expected_dir[cid] = MANU / vdir
+    misfiled = []
+    stack = [MANU]
+    while stack:
+        cur = stack.pop()
+        for d in sorted(cur.iterdir()):
+            if not d.is_dir() or d.name == "_archive":
+                continue
+            if d.name.startswith("Ch_"):
+                m = re.match(r"(Ch_\d+)_", d.name)
+                want = expected_dir.get(m.group(1)) if m else None
+                if want is None:
+                    misfiled.append(f"{d.relative_to(ROOT)} (id not listed in structure.py)")
+                elif d.parent != want:
+                    misfiled.append(f"{d.relative_to(ROOT)} (expected under {want.relative_to(ROOT)})")
+                continue
+            stack.append(d)
+    if misfiled:
+        fail("chapter directories not matching structure.py:\n  " + "\n  ".join(misfiled))
+
+
 def chapters():
     """Yield (part, volume, display_number, chapter_id, path, text) in reading order."""
     for part in PARTS:
@@ -75,11 +110,6 @@ def chapters():
             voldir = MANU / vdir
             if not voldir.is_dir():
                 fail(f"volume {label} directory missing: {voldir}")
-            stray = sorted(d.name for d in voldir.iterdir()
-                           if d.is_dir() and d.name.startswith("Ch_")
-                           and not any(d.name.startswith(c + "_") for c in ids))
-            if stray:
-                fail(f"volume {label} has chapter dirs not listed in structure.py: {stray}")
             for cid in ids:
                 md = resolve_chapter(voldir, cid)
                 text = normalise(md.read_text(encoding="utf-8"))
@@ -112,6 +142,7 @@ def preface_text():
 
 
 def main():
+    check_manuscript_coverage()
     out = [latex_block(r"\frontmatter"),
            latex_block(r"\maketitlepage"),
            latex_block(r"\makecopyrightpage"),

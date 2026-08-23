@@ -1,6 +1,7 @@
 # Build system for "Python: Zero to Godhood"
 # Run from the book ROOT:  make -f build/Makefile all | pdf | epub | html
 # Requires: pandoc 3.x, lualatex (TeX Live), Python 3, poppler (pdftoppm).
+# Note: deleting or renaming a chapter file does not trigger a rebuild; run make clean first.
 
 PANDOC  := pandoc
 HL      := build/code.theme
@@ -8,6 +9,10 @@ PDF     := build/Python_Zero_to_Godhood.pdf
 EPUB    := build/Python_Zero_to_Godhood.epub
 HTML    := build/Python_Zero_to_Godhood.html
 COVER   := build/cover.png
+
+BUILD_INPUTS := build/assemble.py build/structure.py build/preamble.tex \
+                build/breakcode.lua build/code.theme build/preface.md
+CHAPTER_MDS  := $(shell find manuscript -name '*.md' -not -path '*/_archive/*')
 
 PDF_OPTS := --from=markdown+raw_attribute+fenced_code_attributes+pipe_tables \
             --top-level-division=chapter --syntax-highlighting=$(HL) \
@@ -24,12 +29,14 @@ all: pdf epub html
 
 # --verbose makes pandoc echo the full LuaLaTeX log; it is kept in build/build_full.log
 # so overfull boxes and missing glyphs can be audited after the build.
-pdf:
+pdf: $(PDF)
+
+$(PDF): $(BUILD_INPUTS) $(CHAPTER_MDS)
 	python3 build/assemble.py
 	$(PANDOC) build/book_body.md -o $(PDF) $(PDF_OPTS) --verbose > build/build_full.log 2>&1
 	@echo "==> $(PDF)  (log: build/build_full.log)"
 
-$(COVER): pdf
+$(COVER): $(PDF)
 	pdftoppm -png -r 200 -f 1 -l 1 -singlefile $(PDF) build/cover_tmp
 	mv build/cover_tmp.png $(COVER)
 
