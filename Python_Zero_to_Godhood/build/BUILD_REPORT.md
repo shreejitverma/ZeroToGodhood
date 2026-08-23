@@ -9,8 +9,8 @@ Build command: `make -f build/Makefile all` from `Python_Zero_to_Godhood/`, from
 | File | Result |
 |---|---|
 | `build/Python_Zero_to_Godhood.pdf` | 2266 pages, 6.2 MB |
-| `build/Python_Zero_to_Godhood.epub` | 2.2 MB, 348 content documents |
-| `build/Python_Zero_to_Godhood.html` | 5.3 MB, single file, no external assets |
+| `build/Python_Zero_to_Godhood.epub` | 2.2 MB, 350 content documents |
+| `build/Python_Zero_to_Godhood.html` | 5.0 MB, single file, no external assets |
 | `build/cover.png` | rendered from PDF page 1 at 200 dpi |
 
 ## Phase 0: reconnaissance
