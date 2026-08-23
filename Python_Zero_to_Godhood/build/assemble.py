@@ -67,6 +67,36 @@ def quote_bare_dunders(heading):
                    for p in parts)
 
 
+def check_manuscript_coverage():
+    """Fail if the manuscript tree holds anything structure.py does not list.
+
+    Every manuscript/<Part>/<Volume> directory that contains Ch_* directories
+    must be named by some volume in PARTS, and every Ch_* directory under any
+    such volume must map to a listed chapter id. The _archive tree is ignored.
+    """
+    listed_dirs = {MANU / vdir for part in PARTS for _, _, _, vdir, _ in part[3]}
+    listed_ids = {cid for part in PARTS for vol in part[3] for cid in vol[4]}
+    unlisted_dirs = []
+    unlisted_chapters = []
+    for partdir in sorted(d for d in MANU.iterdir() if d.is_dir() and d.name != "_archive"):
+        for voldir in sorted(d for d in partdir.iterdir() if d.is_dir() and d.name != "_archive"):
+            chdirs = sorted(d for d in voldir.iterdir()
+                            if d.is_dir() and d.name.startswith("Ch_"))
+            if not chdirs:
+                continue
+            if voldir not in listed_dirs:
+                unlisted_dirs.append(str(voldir.relative_to(ROOT)))
+                continue
+            for d in chdirs:
+                m = re.match(r"(Ch_\d+)_", d.name)
+                if not m or m.group(1) not in listed_ids:
+                    unlisted_chapters.append(str(d.relative_to(ROOT)))
+    if unlisted_dirs:
+        fail(f"volume directories not listed in structure.py: {unlisted_dirs}")
+    if unlisted_chapters:
+        fail(f"chapter directories not listed in structure.py: {unlisted_chapters}")
+
+
 def chapters():
     """Yield (part, volume, display_number, chapter_id, path, text) in reading order."""
     for part in PARTS:
@@ -112,6 +142,7 @@ def preface_text():
 
 
 def main():
+    check_manuscript_coverage()
     out = [latex_block(r"\frontmatter"),
            latex_block(r"\maketitlepage"),
            latex_block(r"\makecopyrightpage"),
