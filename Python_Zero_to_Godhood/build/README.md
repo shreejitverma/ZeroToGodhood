@@ -19,7 +19,7 @@ Outputs land in `build/`:
 | File | What |
 |---|---|
 | `Python_Zero_to_Godhood.pdf`  | print-quality PDF, about 2270 pages (LuaLaTeX + KOMA scrbook) |
-| `Python_Zero_to_Godhood.epub` | reflowable e-book with full nav and cover |
+| `Python_Zero_to_Godhood.epub` | reflowable e-book with full nav tree (part > volume > chapter) and cover |
 | `Python_Zero_to_Godhood.html` | single self-contained HTML (dark-mode aware) |
 | `cover.png`                   | cover image rendered from the PDF title page |
 
@@ -62,7 +62,10 @@ grep -c "Overfull\|Missing character" build/build_full.log        # must be 0
    with raw-LaTeX blocks injected for the title page, copyright, preface, table of
    contents, part pages, and volume dividers.
 3. `assemble_web.py` does the same for EPUB/HTML, emitting Markdown headings for the
-   part/volume dividers instead of raw LaTeX.
+   part/volume dividers instead of raw LaTeX. Parts are H1, volumes H2, and chapter
+   content is shifted down two levels (the opener becomes an H3 tagged `.chapter`),
+   so the EPUB nav and HTML contents form the same part > volume > chapter tree as
+   the PDF table of contents.
 4. `preamble.tex` is the book design: fonts and glyph fallback, colour palette, page
    geometry, code/output box styling, part/volume/chapter typography, running heads,
    the title/copyright/colophon macros, and the multi-level table of contents.

@@ -8,15 +8,19 @@ body {
   color: var(--ink); line-height: 1.55; margin: 0 6%;
   text-align: justify; hyphens: auto;
 }
-h1, h2, h3, h4 {
+h1, h2, h3, h4, h5 {
   font-family: "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   line-height: 1.2; color: var(--ink); font-weight: 700;
   text-align: left; margin-top: 1.6em;
 }
 h1 { font-size: 1.7em; border-bottom: 1.5px solid var(--ink); padding-bottom: 0.25em; }
-h2 { font-size: 1.25em; color: var(--accent); }
-h3 { font-size: 1.05em; }
-h1.part-divider { color: var(--accent); border: 0; text-align: left; }
+h1.part { font-size: 1.8em; color: var(--accent); border: 0; }
+h2.volume { font-size: 1.5em; color: var(--deep); }
+h3.chapter { font-size: 1.4em; border-bottom: 1.5px solid var(--ink); padding-bottom: 0.25em; }
+h2 { font-size: 1.25em; }
+h3 { font-size: 1.1em; }
+h4 { font-size: 1.05em; color: var(--accent); }
+h5 { font-size: 1.0em; }
 a { color: #1F5C8B; text-decoration: none; }
 code, pre, kbd {
   font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
