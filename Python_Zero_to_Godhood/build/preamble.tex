@@ -20,8 +20,13 @@
   RawFeature={fallback=zghfallback},
   UprightFont={* Roman}, BoldFont={* Bold},
   ItalicFont={* Italic}, BoldItalicFont={* Bold Italic}]
+% Noto Sans ships as a variable font (one file per slant), so fontspec cannot
+% discover a static Bold; the bold faces are the wght=700 instance.
 \setsansfont{Noto Sans}[
-  Ligatures=TeX, RawFeature={fallback=zghfallback}]
+  Ligatures=TeX, RawFeature={fallback=zghfallback},
+  ItalicFont={Noto Sans Italic},
+  BoldFont={Noto Sans}, BoldFeatures={RawFeature={axis={wght=700}}},
+  BoldItalicFont={Noto Sans Italic}, BoldItalicFeatures={RawFeature={axis={wght=700}}}]
 \setmonofont{JetBrainsMono Nerd Font}[
   Scale=0.86, RawFeature={fallback=zghfallback}]
 \setmathfont{STIX Two Math}
@@ -50,7 +55,11 @@
 \usepackage{microtype}
 \usepackage{ragged2e}
 \linespread{1.06}
-\setlength{\emergencystretch}{2em}
+% Prose is dense with inline code, which cannot hyphenate. A looser tolerance
+% and a larger emergency stretch let TeX prefer a slightly loose line over an
+% overfull one; build/breakcode.lua supplies the break points inside code.
+\tolerance=1500
+\setlength{\emergencystretch}{3em}
 \usepackage{setspace}
 \frenchspacing
 \usepackage{needspace}
@@ -130,6 +139,12 @@
 
 % ---- Table of contents styling ---------------------------------------------
 \usepackage{tocbasic}
+% The book runs past page 2000: widen the page-number box (default 1.55em)
+% and the right margin reserved for it so four-digit numbers never overflow.
+\makeatletter
+\renewcommand*\@pnumwidth{2.6em}
+\renewcommand*\@tocrmarg{3.4em}
+\makeatother
 \DeclareTOCStyleEntry[
   entrynumberformat=\hphantom, dynnumwidth,
   beforeskip=6pt plus 1pt]{tocline}{chapter}
@@ -222,7 +237,7 @@
   \vspace{1.1em}
   {\bfseries\fontsize{13}{16}\selectfont\color{zgmuted}\MakeUppercase{#2}}\par
   \vspace{0.55em}
-  {\bfseries\fontsize{26}{30}\selectfont\color{zgink} #3}\par
+  {\bfseries\fontsize{26}{32}\selectfont\color{zgink} #3}\par
   \endgroup
   \clearpage}
 \newcommand{\booktimelinevol}[2]{\zgvoldivider{zgaccent}{#1}{#2}}

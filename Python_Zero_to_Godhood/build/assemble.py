@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Assemble the full ordered book into a single Markdown stream for pandoc.
+"""Assemble the full ordered book into a single Markdown stream for pandoc (PDF).
 
-Reads the canonical structure (build/structure.py), resolves each volume label to
-its directory, orders chapters within each volume, and emits build/book_body.md
-with raw-LaTeX blocks injected for the front matter, part pages, and volume
-dividers. Also writes build/manifest.tsv (for review) and prints stats.
+Reads build/structure.py (the explicit Part -> Volume -> chapter-id order),
+resolves every chapter id to exactly one manuscript file, normalises each
+chapter on the way through (never in place), and emits build/book_body.md with
+raw-LaTeX blocks for the front matter, part pages, and volume dividers.
+Also writes build/manifest.tsv for review.
+
+Resolution is strict: a volume directory that does not exist, or a chapter id
+that matches 0 or 2+ files, aborts the build.
 """
 import re
 import sys
@@ -15,39 +19,80 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 MANU = ROOT / "manuscript"
 OUT = ROOT / "build" / "book_body.md"
 MANIFEST = ROOT / "build" / "manifest.tsv"
-
-ROMAN = {"Deep_A": "A", "Deep_B": "B", "Deep_C": "C", "Deep_D": "D", "Deep_E": "E",
-         "Deep_F": "F", "Deep_G": "G", "Deep_H": "H", "Deep_I": "I", "Deep_J": "J",
-         "Deep_K": "K", "Deep_L": "L", "Deep_M": "M", "Deep_N": "N", "Deep_O": "O",
-         "Deep_P": "P", "Deep_Q": "Q", "Deep_R": "R", "Deep_S": "S", "Deep_T": "T",
-         "Deep_U": "U", "Deep_V": "V", "Deep_W": "W"}
+BOM = "﻿"
 
 
-def find_volume_dir(label):
-    hits = [d for d in MANU.rglob(f"{label}_*") if d.is_dir()
-            and re.match(rf"{label}_", d.name)]
-    # exclude nested chapter dirs (Ch_) accidentally matching
-    hits = [d for d in hits if not d.name.startswith("Ch_")]
-    if len(hits) != 1:
-        sys.exit(f"ERROR: volume {label} resolved to {len(hits)} dirs: {hits}")
-    return hits[0]
+def fail(msg):
+    sys.exit(f"ERROR: {msg}")
 
 
-def chapter_files(voldir):
-    """Return chapter (display_num, stable_id, md_path) ordered for reading."""
-    rows = []
-    for ch in voldir.iterdir():
-        if not (ch.is_dir() and ch.name.startswith("Ch_")):
-            continue
-        md = next(ch.glob("*.md"), None)
-        if md is None:
-            sys.exit(f"ERROR: no .md in {ch}")
-        txt = md.read_text(encoding="utf-8", errors="replace").lstrip("﻿")
-        m = re.search(r'^#\s*Chapter\s+(\d+)', txt, re.M)
-        disp = int(m.group(1)) if m else 10**6
-        sid = re.match(r'(Ch_\d+)', ch.name).group(1)
-        rows.append((disp, sid, md))
-    return sorted(rows, key=lambda r: (r[0], r[1]))
+def resolve_chapter(voldir, cid):
+    """Return the single .md file for chapter id `cid` inside `voldir`."""
+    dirs = [d for d in voldir.iterdir() if d.is_dir() and d.name.startswith(cid + "_")]
+    if len(dirs) != 1:
+        fail(f"{cid} resolved to {len(dirs)} directories under {voldir}: {dirs}")
+    mds = [m for m in dirs[0].glob("*.md")]
+    if len(mds) != 1:
+        fail(f"{cid} resolved to {len(mds)} .md files in {dirs[0]}: {mds}")
+    return mds[0]
+
+
+def normalise(text):
+    """Per-chapter normalisation applied to the assembled stream only."""
+    text = text.lstrip(BOM)
+    lines = []
+    in_fence = False
+    for line in text.splitlines():
+        if line.startswith("```"):
+            in_fence = not in_fence
+            # An untagged opening fence gets `text` so the highlighter styles it
+            # like every other output block.
+            if in_fence and line.strip() == "```":
+                line = "```text"
+        if not in_fence and line.startswith("#"):
+            line = quote_bare_dunders(line)
+        lines.append(line.rstrip())
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def quote_bare_dunders(heading):
+    """Wrap an unquoted __name__ in a heading in backticks.
+
+    Markdown otherwise reads the underscores as emphasis and the heading, the
+    table of contents, and the running head all lose them ("__slots__" became
+    "slots"). Existing code spans are left untouched.
+    """
+    parts = re.split(r"(`[^`]*`)", heading)
+    return "".join(p if p.startswith("`") else re.sub(r"(?<!`)(__\w+__)(?!`)", r"`\1`", p)
+                   for p in parts)
+
+
+def chapters():
+    """Yield (part, volume, display_number, chapter_id, path, text) in reading order."""
+    for part in PARTS:
+        pnum, ptitle, psub, vols = part
+        for label, kind, vtitle, vdir, ids in vols:
+            voldir = MANU / vdir
+            if not voldir.is_dir():
+                fail(f"volume {label} directory missing: {voldir}")
+            stray = sorted(d.name for d in voldir.iterdir()
+                           if d.is_dir() and d.name.startswith("Ch_")
+                           and not any(d.name.startswith(c + "_") for c in ids))
+            if stray:
+                fail(f"volume {label} has chapter dirs not listed in structure.py: {stray}")
+            for cid in ids:
+                md = resolve_chapter(voldir, cid)
+                text = normalise(md.read_text(encoding="utf-8"))
+                m = re.match(r"#\s*Chapter\s+(\d+)", text)
+                if not m:
+                    fail(f"{cid}: first line is not a '# Chapter N' heading ({md})")
+                yield part, (label, kind, vtitle), int(m.group(1)), cid, md, text
+
+
+def volume_heading(label, kind):
+    if kind == "timeline":
+        return f"Volume {int(label.split('_')[1])}"
+    return f"Deep Volume {label.split('_')[1]}"
 
 
 def latex_block(code):
@@ -58,57 +103,43 @@ def esc(s):
     return s.replace("&", r"\&").replace("_", r"\_").replace("#", r"\#")
 
 
+def preface_text():
+    pref = ROOT / "build" / "preface.md"
+    txt = normalise(pref.read_text(encoding="utf-8"))
+    if not re.match(r"^\s*#\s", txt):
+        txt = "# Preface {.unnumbered}\n\n" + txt
+    return txt
+
+
 def main():
-    parts_out = []
+    out = [latex_block(r"\frontmatter"),
+           latex_block(r"\maketitlepage"),
+           latex_block(r"\makecopyrightpage"),
+           "\n" + preface_text() + "\n",
+           latex_block(r"\cleardoublepage\tableofcontents\cleardoublepage\mainmatter")]
     manifest = ["part\tvolume_label\tvolume_title\tchapter_id\tdisplay\tmd"]
-    total_ch = 0
-
-    # ---- front matter ----
-    parts_out.append(latex_block(r"\frontmatter"))
-    parts_out.append(latex_block(r"\maketitlepage"))
-    parts_out.append(latex_block(r"\makecopyrightpage"))
-
-    preface = ROOT / "build" / "preface.md"
-    if not preface.exists():
-        preface = ROOT / "00_Preface.md"
-    if preface.exists():
-        ptxt = preface.read_text(encoding="utf-8", errors="replace").lstrip("﻿")
-        if not re.match(r'^\s*#\s', ptxt):
-            ptxt = "# Preface {.unnumbered}\n\n" + ptxt
-        parts_out.append("\n" + ptxt.strip() + "\n\n")
-
-    parts_out.append(latex_block(r"\cleardoublepage\tableofcontents\cleardoublepage\mainmatter"))
-
-    # ---- body ----
-    for pnum, ptitle, psub, vols in PARTS:
-        parts_out.append(latex_block(
-            rf"\bookpart{{{esc(ptitle)}}}{{{esc(psub)}}}"))
-        for label, kind, vtitle in vols:
-            voldir = find_volume_dir(label)
-            if kind == "timeline":
-                vol_no = str(int(label.split("_")[1]))
-                vol_label = f"Volume {vol_no}"
-                macro = "booktimelinevol"
-            else:
-                vol_label = f"Deep Volume {ROMAN[label]}"
-                macro = "bookdeepvol"
-            parts_out.append(latex_block(
-                rf"\{macro}{{{esc(vol_label)}}}{{{esc(vtitle)}}}"))
-            for disp, sid, md in chapter_files(voldir):
-                txt = md.read_text(encoding="utf-8", errors="replace").lstrip("﻿")
-                txt = txt.rstrip() + "\n"
-                parts_out.append("\n" + txt + "\n")
-                manifest.append(f"{pnum}\t{label}\t{vtitle}\t{sid}\t{disp}\t"
-                                f"{md.relative_to(ROOT)}")
-                total_ch += 1
-
-    # ---- back matter ----
-    parts_out.append(latex_block(r"\backmatter\makecolophon"))
-
-    OUT.write_text("".join(parts_out), encoding="utf-8")
+    seen_vol = None
+    seen_part = None
+    total = 0
+    for part, vol, disp, cid, md, text in chapters():
+        pnum, ptitle, psub, _ = part
+        label, kind, vtitle = vol
+        if part is not seen_part:
+            out.append(latex_block(rf"\bookpart{{{esc(ptitle)}}}{{{esc(psub)}}}"))
+            seen_part = part
+        if vol != seen_vol:
+            macro = "booktimelinevol" if kind == "timeline" else "bookdeepvol"
+            out.append(latex_block(
+                rf"\{macro}{{{esc(volume_heading(label, kind))}}}{{{esc(vtitle)}}}"))
+            seen_vol = vol
+        out.append("\n" + text + "\n")
+        manifest.append(f"{pnum}\t{label}\t{vtitle}\t{cid}\t{disp}\t{md.relative_to(ROOT)}")
+        total += 1
+    out.append(latex_block(r"\backmatter\makecolophon"))
+    OUT.write_text("".join(out), encoding="utf-8")
     MANIFEST.write_text("\n".join(manifest) + "\n", encoding="utf-8")
-    print(f"Assembled {total_ch} chapters across {len(PARTS)} parts "
-          f"-> {OUT.relative_to(ROOT)} ({OUT.stat().st_size//1024} KB)")
+    print(f"Assembled {total} chapters across {len(PARTS)} parts "
+          f"-> {OUT.relative_to(ROOT)} ({OUT.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":

@@ -2,10 +2,11 @@
 *.pdf
 *.epub
 *.html
+*.png
 book_body.md
 book_web.md
 sample_body.md
-cover.png
 cover_tmp*
 build_full.log
 manifest.tsv
+__pycache__/

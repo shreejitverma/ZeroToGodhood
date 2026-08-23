@@ -12,8 +12,8 @@ COVER   := build/cover.png
 PDF_OPTS := --from=markdown+raw_attribute+fenced_code_attributes+pipe_tables \
             --top-level-division=chapter --syntax-highlighting=$(HL) \
             -V documentclass=scrbook -V classoption=11pt -V classoption=DIV=calc \
-            -H build/preamble.tex --pdf-engine=lualatex \
-            --pdf-engine-opt=-interaction=nonstopmode
+            -H build/preamble.tex --lua-filter=build/breakcode.lua \
+            --pdf-engine=lualatex --pdf-engine-opt=-interaction=nonstopmode
 
 WEB_META := --metadata title="Python: Zero to Godhood" \
             --metadata author="Shreejit Verma" --metadata lang=en
@@ -22,14 +22,16 @@ WEB_META := --metadata title="Python: Zero to Godhood" \
 
 all: pdf epub html
 
+# --verbose makes pandoc echo the full LuaLaTeX log; it is kept in build/build_full.log
+# so overfull boxes and missing glyphs can be audited after the build.
 pdf:
 	python3 build/assemble.py
-	$(PANDOC) build/book_body.md -o $(PDF) $(PDF_OPTS)
-	@echo "==> $(PDF)"
+	$(PANDOC) build/book_body.md -o $(PDF) $(PDF_OPTS) --verbose > build/build_full.log 2>&1
+	@echo "==> $(PDF)  (log: build/build_full.log)"
 
 $(COVER): pdf
-	pdftoppm -png -r 200 -f 1 -l 1 $(PDF) build/cover_tmp
-	mv build/cover_tmp-1.png $(COVER)
+	pdftoppm -png -r 200 -f 1 -l 1 -singlefile $(PDF) build/cover_tmp
+	mv build/cover_tmp.png $(COVER)
 
 epub: $(COVER)
 	python3 build/assemble_web.py
@@ -48,4 +50,4 @@ html:
 	@echo "==> $(HTML)"
 
 clean:
-	rm -f $(PDF) $(EPUB) $(HTML) $(COVER) build/*_body.md build/book_web.md
+	rm -f $(PDF) $(EPUB) $(HTML) $(COVER) build/*_body.md build/book_web.md build/build_full.log build/manifest.tsv
