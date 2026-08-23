@@ -53,9 +53,11 @@ grep -c "Overfull\|Missing character" build/build_full.log        # must be 0
    from directory names; two Deep Volume directories carry swapped letters in the
    manuscript tree (`Deep_H_...` holds Deep Volume J and `Deep_J_...` holds Deep
    Volume H), and `structure.py` is where that is corrected.
-2. `assemble.py` walks that structure, resolves every chapter id to exactly one file
-   (aborting on 0 or 2+ matches, or on chapter directories not listed in
-   `structure.py`), normalises each chapter on the way through (BOM, trailing
+2. `assemble.py` first sweeps the whole `manuscript/` tree (excluding `_archive/`)
+   and aborts if any `Ch_*` directory, at any depth, is not listed in `structure.py`
+   or does not sit under the volume directory `structure.py` assigns it. It then
+   walks that structure, resolves every chapter id to exactly one file (aborting on
+   0 or 2+ matches), normalises each chapter on the way through (BOM, trailing
    whitespace, untagged code fences), and emits `book_body.md`: one Markdown stream
    with raw-LaTeX blocks injected for the title page, copyright, preface, table of
    contents, part pages, and volume dividers.
