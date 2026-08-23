@@ -1,6 +1,6 @@
 # Build report: Python: Zero to Godhood
 
-Date: 2026-08-22.
+Date: 2026-08-23 (re-verification and web navigation fix; first full build 2026-08-22).
 Toolchain: pandoc 3.10.2, LuaHBTeX 1.22.0 (TeX Live 2025), EPUBCheck 5.3.0, poppler 26.08.0, Python 3.
 Build command: `make -f build/Makefile all` from `Python_Zero_to_Godhood/`, from a clean `build/`.
 
@@ -88,6 +88,17 @@ Underfull boxes in the final pass: 283 (loose lines; not margin violations, repo
 
 Glyph spot checks, rendered to PNG and inspected: CJK and box drawing (page 564, UTF codec table), emoji ZWJ family sequence (page 538), Greek and arrows (throughout code boxes), `__slots__` in headings and TOC.
 Visual pass, rendered and inspected: title page (bold now correct), Part II divider, Volume 3 divider, Deep Volume H divider (now asyncio), TOC page xii (four-digit page numbers fit), a dense code page with an output box, the byte-literal and JSON output lines that previously overflowed, and the accidental-quadratics table.
+
+## Re-verification, 2026-08-23
+
+The full pipeline was rebuilt from a clean `build/` and every check re-run; all pass (see Verification, updated below where numbers changed).
+One deliverable gap was found and fixed: the EPUB nav and HTML table of contents were flat (parts, volumes, and chapters all at one level), while the PDF TOC is a part > volume > chapter tree.
+`assemble_web.py` now emits parts as H1, volumes as H2, and shifts every heading inside a chapter down two levels (the opener becomes an H3 tagged `.chapter`); preface subsections are shifted below H3 so the nav lists front matter as a single entry.
+The Makefile builds the EPUB with `--toc-depth=3 --split-level=3` and the HTML with `--toc-depth=3`, and `epub.css`/`html.css` style the new hierarchy (`h1.part`, `h2.volume`, `h3.chapter`, with H4/H5 taking the former section styles).
+Verified for this change: EPUB nav depth 3 with 10 parts, 42 volumes, 295 chapters (352 items, 350 content documents); HTML TOC depth 3 with 348 entries and all 295 chapter ids linked; every heading level H2 to H5 carries an id; body cross-links 1064, broken 0; epubcheck 0 fatals / 0 errors / 0 warnings; `check_html.py` ids=4388 internal_links=1412 broken=0 external_assets=0.
+The id and link counts are lower than the 2026-08-22 numbers because the old depth-2 HTML TOC contributed its own 2,252 section anchors and links; body content is unchanged.
+Browser pass (chrome-devtools-axi, dark mode): TOC nesting, a TOC link resolving to Chapter 15's opener, chapter/section/volume/part heading styles, code and output boxes.
+PDF spot checks re-rendered and inspected: title page, Part II divider, Volume 3 divider, TOC page viii, dense code page 129, CJK codec table (page 564), ZWJ family emoji (page 538), Cyrillic homoglyph and NFKC ligature page (page 552), box-drawing diagram (page 81).
 
 ## Follow-ups (manuscript, not fixed here)
 

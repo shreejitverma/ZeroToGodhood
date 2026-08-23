@@ -44,7 +44,7 @@ epub: $(COVER)
 	python3 build/assemble_web.py
 	$(PANDOC) build/book_web.md -o $(EPUB) \
 	  --from=markdown+fenced_code_attributes+pipe_tables \
-	  --syntax-highlighting=$(HL) --toc --toc-depth=1 --split-level=1 \
+	  --syntax-highlighting=$(HL) --toc --toc-depth=3 --split-level=3 \
 	  --epub-cover-image=$(COVER) --css build/epub.css $(WEB_META)
 	@echo "==> $(EPUB)"
 
@@ -52,7 +52,7 @@ html:
 	python3 build/assemble_web.py
 	$(PANDOC) build/book_web.md -o $(HTML) \
 	  --from=markdown+fenced_code_attributes+pipe_tables \
-	  --syntax-highlighting=$(HL) --standalone --toc --toc-depth=2 \
+	  --syntax-highlighting=$(HL) --standalone --toc --toc-depth=3 \
 	  --embed-resources --css build/html.css $(WEB_META)
 	@echo "==> $(HTML)"
 
