@@ -70,31 +70,36 @@ def quote_bare_dunders(heading):
 def check_manuscript_coverage():
     """Fail if the manuscript tree holds anything structure.py does not list.
 
-    Every manuscript/<Part>/<Volume> directory that contains Ch_* directories
-    must be named by some volume in PARTS, and every Ch_* directory under any
-    such volume must map to a listed chapter id. The _archive tree is ignored.
+    Walks every directory under manuscript/ (skipping any _archive subtree).
+    Each directory whose name starts with Ch_ must be the chapter directory of
+    an id listed in PARTS and must sit directly under the volume directory
+    PARTS names for that id. Anything else, at any depth, aborts the build.
     """
-    listed_dirs = {MANU / vdir for part in PARTS for _, _, _, vdir, _ in part[3]}
-    listed_ids = {cid for part in PARTS for vol in part[3] for cid in vol[4]}
-    unlisted_dirs = []
-    unlisted_chapters = []
-    for partdir in sorted(d for d in MANU.iterdir() if d.is_dir() and d.name != "_archive"):
-        for voldir in sorted(d for d in partdir.iterdir() if d.is_dir() and d.name != "_archive"):
-            chdirs = sorted(d for d in voldir.iterdir()
-                            if d.is_dir() and d.name.startswith("Ch_"))
-            if not chdirs:
+    expected_dir = {}
+    for part in PARTS:
+        for _, _, _, vdir, ids in part[3]:
+            for cid in ids:
+                if cid in expected_dir:
+                    fail(f"{cid} listed more than once in structure.py")
+                expected_dir[cid] = MANU / vdir
+    misfiled = []
+    stack = [MANU]
+    while stack:
+        cur = stack.pop()
+        for d in sorted(cur.iterdir()):
+            if not d.is_dir() or d.name == "_archive":
                 continue
-            if voldir not in listed_dirs:
-                unlisted_dirs.append(str(voldir.relative_to(ROOT)))
-                continue
-            for d in chdirs:
+            if d.name.startswith("Ch_"):
                 m = re.match(r"(Ch_\d+)_", d.name)
-                if not m or m.group(1) not in listed_ids:
-                    unlisted_chapters.append(str(d.relative_to(ROOT)))
-    if unlisted_dirs:
-        fail(f"volume directories not listed in structure.py: {unlisted_dirs}")
-    if unlisted_chapters:
-        fail(f"chapter directories not listed in structure.py: {unlisted_chapters}")
+                want = expected_dir.get(m.group(1)) if m else None
+                if want is None:
+                    misfiled.append(f"{d.relative_to(ROOT)} (id not listed in structure.py)")
+                elif d.parent != want:
+                    misfiled.append(f"{d.relative_to(ROOT)} (expected under {want.relative_to(ROOT)})")
+                continue
+            stack.append(d)
+    if misfiled:
+        fail("chapter directories not matching structure.py:\n  " + "\n  ".join(misfiled))
 
 
 def chapters():
@@ -105,11 +110,6 @@ def chapters():
             voldir = MANU / vdir
             if not voldir.is_dir():
                 fail(f"volume {label} directory missing: {voldir}")
-            stray = sorted(d.name for d in voldir.iterdir()
-                           if d.is_dir() and d.name.startswith("Ch_")
-                           and not any(d.name.startswith(c + "_") for c in ids))
-            if stray:
-                fail(f"volume {label} has chapter dirs not listed in structure.py: {stray}")
             for cid in ids:
                 md = resolve_chapter(voldir, cid)
                 text = normalise(md.read_text(encoding="utf-8"))

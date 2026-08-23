@@ -1,6 +1,7 @@
 # Build system for "Python: Zero to Godhood"
 # Run from the book ROOT:  make -f build/Makefile all | pdf | epub | html
 # Requires: pandoc 3.x, lualatex (TeX Live), Python 3, poppler (pdftoppm).
+# Note: deleting or renaming a chapter file does not trigger a rebuild; run make clean first.
 
 PANDOC  := pandoc
 HL      := build/code.theme
