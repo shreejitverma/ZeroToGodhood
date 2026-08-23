@@ -1,0 +1,4 @@
+# no-mistakes repository configuration (trusted only when read from the default branch).
+# This repository has no CI workflows, so the pipeline's CI step treats a zero-check PR as
+# passed instead of idling until the PR is merged or ci_timeout elapses.
+no_ci: true
