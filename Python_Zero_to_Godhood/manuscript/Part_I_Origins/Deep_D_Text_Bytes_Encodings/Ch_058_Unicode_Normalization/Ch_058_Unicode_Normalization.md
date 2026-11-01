@@ -49,7 +49,7 @@ Verified output (CPython 3.13.5, identical on 3.14.6):
   NFC(composed) == NFC(decomposed): True
   normalized length   : 4
 --- NFKC also folds compatibility variants ---
-  ligature   'fi'  (U+FB01) -> 'fi'
+  ligature   'ﬁ'  (U+FB01) -> 'fi'
   superscript '2' (U+00B2) -> '22'
   fullwidth  'A'  (U+FF21) -> 'A'
 ```
@@ -77,10 +77,10 @@ Unicode defines four normal forms, along two independent axes: **composition** (
 - **NFD** (*canonical decomposition*): decompose to base character plus combining marks. `é` becomes `e` +
   U+0301. Useful when you need to *process* the marks (e.g. strip accents by removing combining characters).
 - **NFKC / NFKD** (*compatibility* composition/decomposition): additionally fold *compatibility* variants that
-  are not strictly the same character but are compatible. The listing shows NFKC turning the `fi` ligature into
+  are not strictly the same character but are compatible. The listing shows NFKC turning the `ﬁ` ligature into
   `fi`, the superscript `²` into `2`, and the fullwidth `Ａ` into `A`. This is a *lossy* fold (it discards
   formatting distinctions) and is the right tool for **search, deduplication, and security checks**, where you
-  want `file` and `file` to match, but the *wrong* tool for text you must preserve exactly.
+  want `ﬁle` and `file` to match, but the *wrong* tool for text you must preserve exactly.
 
 The rule: **NFC for canonical equality and storage** (preserve the text, unify the spellings); **NFKC for
 matching and security** (fold compatibility variants so look-alikes collapse), knowing it is lossy. Choose the
@@ -121,7 +121,7 @@ un-normalized text, is the silent login/lookup bug of §58.1.
 differently, so lookups and dedup silently fail. Normalize (NFC) at the boundary before comparing, hashing, or
 keying.
 
-**Using NFKC where you must preserve text.** §58.2. NFKC is *lossy*, it folds `²` to `2`, `fi` to `fi`,
+**Using NFKC where you must preserve text.** §58.2. NFKC is *lossy*, it folds `²` to `2`, `ﬁ` to `fi`,
 fullwidth to ASCII. Never store NFKC-folded text as the canonical copy of user content; use it for a *search
 key* alongside the preserved original.
 

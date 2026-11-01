@@ -61,7 +61,7 @@ auto func(T t) -> decltype(t.push_back(0)) { ... } // Only works for containers
 **Answer**: Concepts provide a formal, readable way to constrain templates. Instead of cryptic template vomit, you get clear errors: "Type X does not satisfy requirement 'HasPushBack'."
 
 ### 11. What is the Curiously Recurring Template Pattern (CRTP)?
-**Answer**: A pattern where a class `Derived` inherits from `Base<Derived>`. It allows for "Static Polymorphism"achieving polymorphic behavior without the cost of virtual functions.
+**Answer**: A pattern where a class `Derived` inherits from `Base<Derived>`. It allows for "Static Polymorphism" - achieving polymorphic behavior without the cost of virtual functions.
 
 ### 12. Explain `std::void_t` and how it's used for trait detection.
 **Answer**: `void_t` is a template that always maps any list of types to `void`. It's used to check if a certain member or type exists within a class during template instantiation.
